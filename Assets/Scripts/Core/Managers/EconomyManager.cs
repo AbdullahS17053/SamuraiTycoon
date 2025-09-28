@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using Unity.VisualScripting;
 using UnityEngine;
 
 [System.Serializable]
@@ -19,15 +20,27 @@ public class EconomyManager
     private GameData _data;
     private float _tickTimer;
     private const float TICK_INTERVAL = 1.0f; // Update every second
+    private BuildingManager _buildingManager; // Added for income calculation
 
+
+    
     public void Initialize(GameData data)
     {
         _data = data;
         UpdateDebugView();
-        Debug.Log("EconomyManager initialized");
+        Debug.Log("✅ EconomyManager initialized with starting gold: " + _data.Gold);
     }
 
-    // Call this in Update() from a MonoBehaviour wrapper if needed
+    // Set building manager reference for income calculation
+    public void SetBuildingManager(BuildingManager buildingManager)
+    {
+        _buildingManager = buildingManager;
+        Debug.Log("🔗 BuildingManager linked to EconomyManager");
+
+        AddGold(1000);
+    }
+
+    // Call this in Update() from a MonoBehaviour wrapper
     public void Tick(float deltaTime)
     {
         _tickTimer += deltaTime;
@@ -40,43 +53,73 @@ public class EconomyManager
 
     private void CalculatePassiveIncome()
     {
-        double income = 0;
-        // Note: Building income is now calculated by BuildingManager
-        // This method can be expanded for other income sources
+        if (_buildingManager == null)
+        {
+            Debug.LogWarning("⚠️ BuildingManager not set - cannot calculate income");
+            return;
+        }
+
+        double income = _buildingManager.GetTotalIncomePerSecond();
 
         if (income > 0)
         {
             AddGold(income);
+            Debug.Log($"💵 Passive income: +{income} gold");
         }
     }
 
     public void AddGold(double amount)
     {
-        if (amount <= 0) return;
+        if (amount <= 0)
+        {
+            Debug.LogWarning("⚠️ Attempted to add negative or zero gold: " + amount);
+            return;
+        }
 
+        double oldGold = _data.Gold;
         _data.Gold += amount;
         UpdateDebugView();
+
+        Debug.Log($"💰 Gold: {oldGold} → {_data.Gold} (+{amount})");
         OnGoldChanged?.Invoke(amount);
     }
 
     public bool SpendGold(double amount)
     {
+        if (amount <= 0)
+        {
+            Debug.LogError("❌ Attempted to spend negative gold: " + amount);
+            return false;
+        }
+
         if (_data.Gold >= amount)
         {
+            double oldGold = _data.Gold;
             _data.Gold -= amount;
             UpdateDebugView();
+
+            Debug.Log($"💸 Gold: {oldGold} → {_data.Gold} (-{amount})");
             OnGoldChanged?.Invoke(-amount);
             return true;
         }
+
+        Debug.Log($"❌ Not enough gold! Need: {amount}, Have: {_data.Gold}");
         return false;
     }
 
     public void AddHonor(double amount)
     {
-        if (amount <= 0) return;
+        if (amount <= 0)
+        {
+            Debug.LogWarning("⚠️ Attempted to add negative honor: " + amount);
+            return;
+        }
 
+        double oldHonor = _data.Honor;
         _data.Honor += amount;
         UpdateDebugView();
+
+        Debug.Log($"🎖️ Honor: {oldHonor} → {_data.Honor} (+{amount})");
         OnHonorChanged?.Invoke(amount);
     }
 

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa4e176e2cbcbec489b58e74a1b25116, type: 3}
+  m_Name: Config_Temple
+  m_EditorClassIdentifier: 
+  ID: temple
+  DisplayName: Temple
+  Description: 
+  BaseCost: 1000
+  CostMultiplier: 1.15
+  BaseIncome: 10
+  IncomeMultiplier: 1.1
+  Icon: {fileID: 21300000, guid: 08af39523c727407f83eba21c4cfb93e, type: 3}
+  Prefab: {fileID: 0}
+  ThemeColor: {r: 1, g: 1, b: 1, a: 1}
