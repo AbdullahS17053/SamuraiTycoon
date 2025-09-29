@@ -6,7 +6,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Manager References - DRAG THIS OBJECT TO ALL FIELDS!")]
     public EconomyManager Economy;
-    public BuildingManager Buildings;
+    public BuildingManager3D Buildings; // ← CHANGED to 3D manager
     public UIManager UI;
     public SaveManager Save;
 
@@ -27,8 +27,6 @@ public class GameManager : MonoBehaviour
             Debug.Log("⚠️ Duplicate GameManager destroyed");
             Destroy(gameObject);
         }
-
-        Economy.SetBuildingManager(Buildings);
     }
 
     void InitializeManagers()
@@ -47,7 +45,11 @@ public class GameManager : MonoBehaviour
         Debug.Log("✅ EconomyManager initialized");
 
         Buildings.Initialize(Save.Data, Economy);
-        Debug.Log("✅ BuildingManager initialized");
+        Debug.Log("✅ BuildingManager3D initialized");
+
+        // Link building manager to economy for income calculation
+        Economy.SetBuildingManager(Buildings);
+        Debug.Log("🔗 BuildingManager3D linked to EconomyManager");
 
         UI.Initialize(Save.Data, Economy, Buildings);
         Debug.Log("✅ UIManager initialized");
@@ -60,6 +62,13 @@ public class GameManager : MonoBehaviour
         }
 
         Debug.Log("🎉 ALL MANAGERS INITIALIZED SUCCESSFULLY!");
+    }
+
+    void Update()
+    {
+        // Tick economy and building managers
+        Economy.Tick(Time.deltaTime);
+        // BuildingManager3D now handles its own Update tick
     }
 
     void OnApplicationPause(bool pauseStatus)
@@ -77,10 +86,14 @@ public class GameManager : MonoBehaviour
         Debug.Log("👋 Game quit - auto-saved");
     }
 
-    // Call this from UI buttons for manual saving
-    public void ManualSave()
+    [ContextMenu("Reset Game Runtime")]
+    public void ResetGameRuntime()
     {
-        Save.SaveGame();
-        Debug.Log("💾 Manual save completed");
+        Debug.Log("🔄 Resetting game runtime...");
+
+        Save.ResetGameData();
+        InitializeManagers();
+
+        Debug.Log("🎮 Game reset complete! All managers reinitialized.");
     }
 }

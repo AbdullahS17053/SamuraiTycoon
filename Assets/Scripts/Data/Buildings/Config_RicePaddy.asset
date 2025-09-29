@@ -22,3 +22,5 @@ MonoBehaviour:
   Icon: {fileID: 21300000, guid: ea533b43ad7fd47d5af0bc3d2aa44f63, type: 3}
   Prefab: {fileID: 673632658682556454, guid: c50002cc036c81f4bb846f5008a64ec0, type: 3}
   ThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  modules:
+  - {fileID: 11400000, guid: 51c66e163d7d0e142b6220a05723289a, type: 2}

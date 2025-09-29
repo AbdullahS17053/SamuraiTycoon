@@ -1,5 +1,4 @@
 ﻿using System;
-using Unity.VisualScripting;
 using UnityEngine;
 
 [System.Serializable]
@@ -18,12 +17,10 @@ public class EconomyManager
     public event Action<int> OnPeasantsChanged;
 
     private GameData _data;
+    private BuildingManager3D _buildingManager; // ← CHANGED TO BuildingManager3D
     private float _tickTimer;
-    private const float TICK_INTERVAL = 1.0f; // Update every second
-    private BuildingManager _buildingManager; // Added for income calculation
+    private const float TICK_INTERVAL = 1.0f;
 
-
-    
     public void Initialize(GameData data)
     {
         _data = data;
@@ -31,13 +28,11 @@ public class EconomyManager
         Debug.Log("✅ EconomyManager initialized with starting gold: " + _data.Gold);
     }
 
-    // Set building manager reference for income calculation
-    public void SetBuildingManager(BuildingManager buildingManager)
+    // CHANGED PARAMETER TYPE to BuildingManager3D
+    public void SetBuildingManager(BuildingManager3D buildingManager)
     {
         _buildingManager = buildingManager;
-        Debug.Log("🔗 BuildingManager linked to EconomyManager");
-
-        AddGold(1000);
+        Debug.Log("🔗 BuildingManager3D linked to EconomyManager");
     }
 
     // Call this in Update() from a MonoBehaviour wrapper
@@ -55,7 +50,7 @@ public class EconomyManager
     {
         if (_buildingManager == null)
         {
-            Debug.LogWarning("⚠️ BuildingManager not set - cannot calculate income");
+            Debug.LogWarning("⚠️ BuildingManager3D not set - cannot calculate income");
             return;
         }
 

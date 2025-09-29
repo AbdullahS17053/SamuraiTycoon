@@ -85,8 +85,8 @@ public class SaveManager
         }
     }
 
-    // Call this when game starts to calculate offline earnings
-    public double CalculateOfflineEarnings(BuildingManager buildingManager)
+    // CHANGED PARAMETER TYPE to BuildingManager3D
+    public double CalculateOfflineEarnings(BuildingManager3D buildingManager)
     {
         if (Data == null || Data.LastSaveTime == default)
         {

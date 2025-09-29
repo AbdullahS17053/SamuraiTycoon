@@ -10,14 +10,11 @@ public class UIManager
     public TextMeshProUGUI samuraiText;
     public TextMeshProUGUI peasantsText;
 
-    [Header("UI Panels")]
-    public GameObject buildingPanel;
-
     private GameData _data;
     private EconomyManager _economy;
-    private BuildingManager _buildings;
+    private BuildingManager3D _buildings;
 
-    public void Initialize(GameData data, EconomyManager economy, BuildingManager buildings)
+    public void Initialize(GameData data, EconomyManager economy, BuildingManager3D buildings)
     {
         _data = data;
         _economy = economy;
@@ -28,26 +25,19 @@ public class UIManager
         if (honorText == null) Debug.LogError("❌ honorText is not assigned!");
         if (samuraiText == null) Debug.LogError("❌ samuraiText is not assigned!");
         if (peasantsText == null) Debug.LogError("❌ peasantsText is not assigned!");
-        if (buildingPanel == null) Debug.LogError("❌ buildingPanel is not assigned!");
 
         // Subscribe to economy events
         _economy.OnGoldChanged += UpdateCurrencyDisplay;
         _economy.OnHonorChanged += UpdateCurrencyDisplay;
-        _economy.OnSamuraiChanged += UpdateCurrencyDisplay;
-        _economy.OnPeasantsChanged += UpdateCurrencyDisplay;
-
-        // Subscribe to building events
-        _buildings.OnBuildingUpgraded += OnBuildingUpgraded;
 
         // Initial UI update
         UpdateCurrencyDisplay(0);
 
-        Debug.Log("✅ UIManager initialized and events subscribed");
+        Debug.Log("✅ UIManager initialized successfully with BuildingManager3D");
     }
 
     private void UpdateCurrencyDisplay(double change)
     {
-        // This method is called automatically when currency changes
         if (goldText != null)
             goldText.text = FormatNumber(_data.Gold) + " Gold";
 
@@ -61,19 +51,6 @@ public class UIManager
             peasantsText.text = _data.Peasants + " Peasants";
 
         Debug.Log($"🔄 UI Updated: Gold={_data.Gold}, Honor={_data.Honor}");
-    }
-
-    private void UpdateCurrencyDisplay(int change)
-    {
-        // Overload for integer changes (samurai/peasants)
-        UpdateCurrencyDisplay((double)change);
-    }
-
-    public void OnBuildingUpgraded(string buildingId)
-    {
-        Debug.Log($"🏗️ UI notified of building upgrade: {buildingId}");
-        // Currency display updates automatically via events
-        // Add building-specific UI updates here if needed
     }
 
     private string FormatNumber(double num)

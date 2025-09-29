@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class BuildingManager : MonoBehaviour
+public class BuildingManager3D : MonoBehaviour
 {
-    public static BuildingManager Instance { get; private set; }
+    public static BuildingManager3D Instance { get; private set; }
 
     [Header("Building Configs - DRAG BUILDINGS HERE!")]
     public List<BuildingConfig> AllBuildings = new List<BuildingConfig>();
@@ -13,9 +13,14 @@ public class BuildingManager : MonoBehaviour
     public Transform buildingPanelContent;
     public GameObject buildingUIElementPrefab;
 
+    [Header("Camera Control")]
+    public Camera mainCamera;
+    public float cameraMoveSpeed = 5f;
+    public Vector3 panelCameraOffset = new Vector3(0, 2, -5);
+
     [Header("Runtime Info")]
     public Dictionary<string, Building> BuildingInstances = new Dictionary<string, Building>();
-    public Dictionary<string, BuildingObject> BuildingObjects = new Dictionary<string, BuildingObject>();
+    public Dictionary<string, BuildingObject3D> BuildingObjects = new Dictionary<string, BuildingObject3D>();
 
     private GameData _data;
     private EconomyManager _economy;
@@ -23,18 +28,27 @@ public class BuildingManager : MonoBehaviour
     private float _tickTimer;
     private const float TICK_INTERVAL = 0.1f;
     private string _currentSelectedBuilding = "";
+    private Vector3 _originalCameraPosition;
+    private Quaternion _originalCameraRotation;
 
     // Events
     public System.Action<string> OnBuildingUpgraded;
     public System.Action<string, string> OnModuleActivated;
-    public System.Action<string> OnBuildingSelected; // BuildingID
+    public System.Action<string> OnBuildingSelected;
 
     void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
-            Debug.Log("✅ BuildingManager singleton created");
+            Debug.Log("✅ BuildingManager3D singleton created");
+        }
+
+        // Store original camera position
+        if (mainCamera != null)
+        {
+            _originalCameraPosition = mainCamera.transform.position;
+            _originalCameraRotation = mainCamera.transform.rotation;
         }
     }
 
@@ -58,12 +72,12 @@ public class BuildingManager : MonoBehaviour
                 if (buildingData != null)
                 {
                     BuildingInstances[config.ID] = new Building(config, buildingData);
-                    Debug.Log($"🏗️ Building instance created: {config.DisplayName} with {config.modules.Count} modules");
+                    Debug.Log($"🏗️ 3D Building instance created: {config.DisplayName} with {config.modules.Count} modules");
                 }
             }
         }
 
-        Debug.Log($"✅ BuildingManager initialized with {BuildingInstances.Count} buildings");
+        Debug.Log($"✅ BuildingManager3D initialized with {BuildingInstances.Count} buildings");
     }
 
     void Update()
@@ -77,25 +91,31 @@ public class BuildingManager : MonoBehaviour
             }
             _tickTimer = 0f;
         }
+
+        // Handle camera movement when panel is open
+        if (buildingPanel != null && buildingPanel.activeInHierarchy && !string.IsNullOrEmpty(_currentSelectedBuilding))
+        {
+            MoveCameraToSelectedBuilding();
+        }
     }
 
     // ========== BUILDING OBJECT MANAGEMENT ==========
 
-    public void RegisterBuildingObject(BuildingObject buildingObject)
+    public void RegisterBuildingObject(BuildingObject3D buildingObject)
     {
         if (!BuildingObjects.ContainsKey(buildingObject.BuildingID))
         {
             BuildingObjects[buildingObject.BuildingID] = buildingObject;
-            Debug.Log($"📝 BuildingObject registered: {buildingObject.BuildingID}");
+            Debug.Log($"📝 3D BuildingObject registered: {buildingObject.BuildingID}");
         }
     }
 
-    public void UnregisterBuildingObject(BuildingObject buildingObject)
+    public void UnregisterBuildingObject(BuildingObject3D buildingObject)
     {
         if (BuildingObjects.ContainsKey(buildingObject.BuildingID))
         {
             BuildingObjects.Remove(buildingObject.BuildingID);
-            Debug.Log($"📝 BuildingObject unregistered: {buildingObject.BuildingID}");
+            Debug.Log($"📝 3D BuildingObject unregistered: {buildingObject.BuildingID}");
         }
     }
 
@@ -116,11 +136,18 @@ public class BuildingManager : MonoBehaviour
         {
             buildingPanel.SetActive(true);
             UpdateBuildingPanel();
-            Debug.Log($"📊 Building panel shown for: {buildingId}");
+            Debug.Log($"📊 3D Building panel shown for: {buildingId}");
         }
         else
         {
             Debug.LogError("❌ Building panel reference is null!");
+        }
+
+        // Move camera to focus on selected building
+        if (mainCamera != null)
+        {
+            _originalCameraPosition = mainCamera.transform.position;
+            _originalCameraRotation = mainCamera.transform.rotation;
         }
 
         OnBuildingSelected?.Invoke(buildingId);
@@ -138,9 +165,30 @@ public class BuildingManager : MonoBehaviour
                 buildingObj.SetSelected(false);
             }
 
+            // Reset camera
+            if (mainCamera != null)
+            {
+                mainCamera.transform.position = _originalCameraPosition;
+                mainCamera.transform.rotation = _originalCameraRotation;
+            }
+
             _currentSelectedBuilding = "";
-            Debug.Log("📊 Building panel hidden");
+            Debug.Log("📊 3D Building panel hidden");
         }
+    }
+
+    private void MoveCameraToSelectedBuilding()
+    {
+        if (mainCamera == null || string.IsNullOrEmpty(_currentSelectedBuilding)) return;
+
+        var buildingObj = GetBuildingObject(_currentSelectedBuilding);
+        if (buildingObj == null) return;
+
+        Vector3 targetPosition = buildingObj.transform.position + panelCameraOffset;
+        Quaternion targetRotation = Quaternion.LookRotation(buildingObj.transform.position - targetPosition);
+
+        mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, targetPosition, Time.deltaTime * cameraMoveSpeed);
+        mainCamera.transform.rotation = Quaternion.Lerp(mainCamera.transform.rotation, targetRotation, Time.deltaTime * cameraMoveSpeed);
     }
 
     private void UpdateBuildingPanel()
@@ -157,18 +205,35 @@ public class BuildingManager : MonoBehaviour
         var config = GetConfig(_currentSelectedBuilding);
         var data = GetData(_currentSelectedBuilding);
 
-        if (building == null || config == null || data == null) return;
-
-        // Create main building info UI
-        var buildingUI = Instantiate(buildingUIElementPrefab, buildingPanelContent);
-        var buildingUIComponent = buildingUI.GetComponent<BuildingPanelUI>();
-
-        if (buildingUIComponent != null)
+        if (building == null || config == null || data == null)
         {
-            buildingUIComponent.Initialize(building, config, data, _economy);
+            Debug.LogError($"❌ Cannot update panel - missing data for: {_currentSelectedBuilding}");
+            return;
         }
 
-        Debug.Log($"🔄 Building panel updated for: {_currentSelectedBuilding}");
+        // Create main building info UI
+        if (buildingUIElementPrefab != null)
+        {
+            var buildingUI = Instantiate(buildingUIElementPrefab, buildingPanelContent);
+            var buildingUIComponent = buildingUI.GetComponent<BuildingPanelUI3D>();
+
+            if (buildingUIComponent != null)
+            {
+                // This is the fixed Initialize method call
+                buildingUIComponent.Initialize(building, config, data, _economy);
+                Debug.Log($"✅ BuildingPanelUI3D initialized successfully");
+            }
+            else
+            {
+                Debug.LogError($"❌ BuildingPanelUI3D component not found on prefab!");
+            }
+        }
+        else
+        {
+            Debug.LogError($"❌ Building UI Element Prefab is null!");
+        }
+
+        Debug.Log($"🔄 3D Building panel updated for: {_currentSelectedBuilding}");
     }
 
     // ========== BUILDING ACTIONS ==========
@@ -178,7 +243,11 @@ public class BuildingManager : MonoBehaviour
         var buildingData = _data.Buildings.Find(b => b.ID == buildingId);
         var buildingInstance = GetBuildingInstance(buildingId);
 
-        if (buildingData == null || buildingInstance == null) return;
+        if (buildingData == null || buildingInstance == null)
+        {
+            Debug.LogError($"❌ Cannot upgrade building: {buildingId} - data not found");
+            return;
+        }
 
         double cost = GetUpgradeCost(buildingId);
 
@@ -217,7 +286,7 @@ public class BuildingManager : MonoBehaviour
         {
             foreach (var module in building.Modules)
             {
-                if (module.moduleName == moduleName)
+                if (module != null && module.moduleName == moduleName)
                 {
                     module.OnButtonClick(building);
                     OnModuleActivated?.Invoke(buildingId, moduleName);
@@ -247,6 +316,11 @@ public class BuildingManager : MonoBehaviour
     public Building GetBuildingInstance(string buildingId)
     {
         return BuildingInstances.ContainsKey(buildingId) ? BuildingInstances[buildingId] : null;
+    }
+
+    public BuildingObject3D GetBuildingObject(string buildingId)
+    {
+        return BuildingObjects.ContainsKey(buildingId) ? BuildingObjects[buildingId] : null;
     }
 
     public List<BuildingModule> GetBuildingModules(string buildingId)
