@@ -18,20 +18,30 @@ public class Building
 
     private void InitializeModules()
     {
-        if (Config.modules == null) return;
+        if (Config.modules == null)
+        {
+            Debug.LogWarning($"No modules found for building: {Config.DisplayName}");
+            return;
+        }
 
         foreach (var module in Config.modules)
         {
             if (module != null)
             {
                 // Get or create module data
-                string moduleKey = module.GetType().Name;
+                string moduleKey = module.GetType().Name + "_" + module.moduleName;
                 if (!ModuleData.ContainsKey(moduleKey))
                 {
-                    ModuleData[moduleKey] = new BuildingModuleData { moduleId = moduleKey };
+                    ModuleData[moduleKey] = new BuildingModuleData
+                    {
+                        moduleId = moduleKey,
+                        level = 1,
+                        isUnlocked = true
+                    };
                 }
 
-                // Initialize module
+                // Initialize module with data
+                module.SetRuntimeData(ModuleData[moduleKey]);
                 module.Initialize(ModuleData[moduleKey]);
                 Modules.Add(module);
 
@@ -40,7 +50,7 @@ public class Building
                 module.OnModuleCompleted += OnModuleCompleted;
                 module.OnModuleProgress += OnModuleProgress;
 
-                Debug.Log($"🔧 Module {module.moduleName} initialized for {Config.DisplayName}");
+                Debug.Log($"🔧 Module {module.moduleName} initialized for {Config.DisplayName} (Level: {ModuleData[moduleKey].level})");
             }
         }
     }
@@ -49,7 +59,10 @@ public class Building
     {
         foreach (var module in Modules)
         {
-            module.OnBuildingTick(this, deltaTime);
+            if (module.isActive)
+            {
+                module.OnBuildingTick(this, deltaTime);
+            }
         }
     }
 
@@ -84,6 +97,17 @@ public class Building
         {
             if (module is T typedModule)
                 return typedModule;
+        }
+        return null;
+    }
+
+    // Get module by name
+    public BuildingModule GetModule(string moduleName)
+    {
+        foreach (var module in Modules)
+        {
+            if (module.moduleName == moduleName)
+                return module;
         }
         return null;
     }

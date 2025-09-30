@@ -1,7 +1,6 @@
 ﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
 using System.Collections.Generic;
 
 public class BuildingPanelUI3D : MonoBehaviour
@@ -19,10 +18,19 @@ public class BuildingPanelUI3D : MonoBehaviour
     [Header("Module Container")]
     public Transform moduleContainer;
     public GameObject moduleButtonPrefab;
+    public TextMeshProUGUI moduleSectionTitle;
 
     [Header("Stats Display")]
     public TextMeshProUGUI statsText;
     public Slider buildingLevelSlider;
+
+    [Header("Module Grid Layout")]
+    public VerticalLayoutGroup moduleGridLayout;
+    public int maxModulesPerRow = 2;
+
+    [Header("Max Level Colors")]
+    public Color maxLevelColor = Color.yellow;
+    public Color normalColor = Color.white;
 
     private Building _building;
     private BuildingConfig _config;
@@ -31,13 +39,26 @@ public class BuildingPanelUI3D : MonoBehaviour
     private List<GameObject> _moduleButtons = new List<GameObject>();
     private bool _isInitialized = false;
 
-    // Initialize method that was missing
     public void Initialize(Building building, BuildingConfig config, BuildingData data, EconomyManager economy)
     {
+        Debug.Log($"🔄 BuildingPanelUI3D.Initialize called for: {config.DisplayName}");
+
         _building = building;
         _config = config;
         _data = data;
         _economy = economy;
+
+        // Debug module information
+        Debug.Log($"🔍 Building: {config.DisplayName}");
+        Debug.Log($"🔍 Building Modules Count: {_building?.Modules?.Count ?? 0}");
+        if (_building?.Modules != null)
+        {
+            foreach (var module in _building.Modules)
+            {
+                Debug.Log($"🔍 Module: {module?.moduleName} (ShowInUI: {module?.showInUI})");
+            }
+        }
+
 
         UpdateBuildingInfo();
         CreateModuleButtons();
@@ -51,6 +72,10 @@ public class BuildingPanelUI3D : MonoBehaviour
         {
             _economy.OnGoldChanged += OnCurrencyChanged;
         }
+        else
+        {
+            Debug.LogWarning("❌ EconomyManager is null!");
+        }
 
         _isInitialized = true;
         Debug.Log($"✅ BuildingPanelUI3D initialized for: {config.DisplayName}");
@@ -58,7 +83,11 @@ public class BuildingPanelUI3D : MonoBehaviour
 
     void UpdateBuildingInfo()
     {
-        if (!_isInitialized || _config == null || _data == null) return;
+        if (!_isInitialized || _config == null || _data == null)
+        {
+            Debug.LogError("❌ Cannot update building info - not initialized!");
+            return;
+        }
 
         buildingNameText.text = _config.DisplayName;
         buildingLevelText.text = $"Level {_data.Level}";
@@ -78,44 +107,136 @@ public class BuildingPanelUI3D : MonoBehaviour
         // Update level slider
         if (buildingLevelSlider != null)
         {
-            buildingLevelSlider.maxValue = 10; // Max level
+            buildingLevelSlider.maxValue = 20;
             buildingLevelSlider.value = _data.Level;
+        }
+
+        // Update module section title
+        if (moduleSectionTitle != null)
+        {
+            int maxedModules = CountMaxedModules();
+            moduleSectionTitle.text = $"Upgrade Modules ({_building.Modules.Count - maxedModules}/{_config.maxModuleSlots} Available)";
         }
     }
 
     void CreateModuleButtons()
     {
-        if (!_isInitialized || moduleContainer == null || moduleButtonPrefab == null) return;
+        Debug.Log($"🔧 CreateModuleButtons called");
+
+        if (!_isInitialized)
+        {
+            Debug.LogError("❌ Not initialized!");
+            return;
+        }
+
+        if (moduleContainer == null)
+        {
+            Debug.LogError("❌ Module container is null!");
+            return;
+        }
+
+        if (moduleButtonPrefab == null)
+        {
+            Debug.LogError("❌ Module button prefab is null!");
+            return;
+        }
 
         // Clear existing buttons
         foreach (var button in _moduleButtons)
             Destroy(button);
         _moduleButtons.Clear();
 
-        if (_building == null || _building.Modules == null) return;
+        if (_building == null)
+        {
+            Debug.LogError("❌ Building is null!");
+            return;
+        }
 
+        if (_building.Modules == null)
+        {
+            Debug.LogWarning("⚠️ No modules found for building");
+            return;
+        }
+
+        Debug.Log($"🔧 Processing {_building.Modules.Count} modules for {_config.DisplayName}");
+
+        int createdButtons = 0;
         foreach (var module in _building.Modules)
         {
             if (module != null && module.showInUI)
             {
-                var buttonObj = Instantiate(moduleButtonPrefab, moduleContainer);
-                var button = buttonObj.GetComponent<Button>();
-                var text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
-
-                if (text != null)
-                {
-                    text.text = $"{module.buttonText}\n{module.GetStatusText(_building)}";
-                }
-
-                // Add click handler
-                string moduleName = module.moduleName;
-                button.onClick.AddListener(() => OnModuleClicked(moduleName));
-
-                _moduleButtons.Add(buttonObj);
-                Debug.Log($"🔧 3D Module button created: {module.moduleName}");
+                CreateModuleButton(module);
+                createdButtons++;
+            }
+            else
+            {
+                Debug.Log($"⚠️ Module is null or showInUI is false: {module?.moduleName}");
             }
         }
+
+        Debug.Log($"🔧 Created {createdButtons} module buttons for {_config.DisplayName}");
     }
+
+    void CreateModuleButton(BuildingModule module)
+    {
+        Debug.Log($"🔧 Creating button for module: {module.moduleName}");
+
+        if (moduleButtonPrefab == null)
+        {
+            Debug.LogError("❌ Module button prefab is null!");
+            return;
+        }
+
+        var buttonObj = Instantiate(moduleButtonPrefab, moduleContainer);
+        if (buttonObj == null)
+        {
+            Debug.LogError("❌ Failed to instantiate button object!");
+            return;
+        }
+
+        var button = buttonObj.GetComponent<Button>();
+        var text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
+        var image = buttonObj.GetComponent<Image>();
+
+        if (button == null) Debug.LogError("❌ Button component missing!");
+        if (text == null) Debug.LogError("❌ TextMeshPro component missing!");
+        if (image == null) Debug.LogError("❌ Image component missing!");
+
+        // Set button appearance based on max level
+        if (image != null)
+        {
+            image.color = module.IsMaxLevel() ? maxLevelColor : module.buttonColor;
+        }
+
+        if (text != null)
+        {
+            text.text = $"{module.buttonText}\n{module.GetStatusText(_building)}";
+
+            // Change text color for max level
+            if (module.IsMaxLevel())
+            {
+                text.color = maxLevelColor;
+            }
+        }
+
+        // Add click handler (only if not max level)
+        if (!module.IsMaxLevel())
+        {
+            string moduleName = module.moduleName;
+            button.onClick.AddListener(() => OnModuleClicked(moduleName));
+            Debug.Log($"🔧 Added click listener for module: {moduleName}");
+        }
+        else
+        {
+            button.interactable = false;
+            Debug.Log($"🔧 Module {module.moduleName} is max level - button disabled");
+        }
+
+        _moduleButtons.Add(buttonObj);
+        Debug.Log($"✅ Successfully created button for module: {module.moduleName}");
+    }
+
+    // ... rest of the methods remain the same as before ...
 
     void UpdateStatsDisplay()
     {
@@ -126,6 +247,13 @@ public class BuildingPanelUI3D : MonoBehaviour
         stats += $"<b>Income:</b> {FormatNumber(CalculateTotalIncome())}/s\n";
         stats += $"<b>Next Upgrade:</b> {FormatNumber(CalculateUpgradeCost())} Gold\n";
         stats += $"<b>Status:</b> {(_data.IsUnlocked ? "🟢 Active" : "🔴 Locked")}\n";
+        stats += $"<b>Modules:</b> {_building.Modules.Count}/{_config.maxModuleSlots}\n";
+
+        int maxedModules = CountMaxedModules();
+        if (maxedModules > 0)
+        {
+            stats += $"<b>Maxed Modules:</b> {maxedModules}\n";
+        }
 
         // Add module-specific stats
         if (_building.Modules != null && _building.Modules.Count > 0)
@@ -135,7 +263,8 @@ public class BuildingPanelUI3D : MonoBehaviour
             {
                 if (module != null)
                 {
-                    stats += $"\n<b>{module.moduleName}:</b>\n";
+                    string maxedIndicator = module.IsMaxLevel() ? " 🏆" : "";
+                    stats += $"\n<b>{module.moduleName}{maxedIndicator}:</b>\n";
                     stats += $"{module.GetStatusText(_building)}\n";
                 }
             }
@@ -145,11 +274,26 @@ public class BuildingPanelUI3D : MonoBehaviour
             statsText.text = stats;
     }
 
+    int CountMaxedModules()
+    {
+        int count = 0;
+        if (_building?.Modules != null)
+        {
+            foreach (var module in _building.Modules)
+            {
+                if (module != null && module.IsMaxLevel())
+                {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     void OnUpgradeClicked()
     {
         if (!_isInitialized) return;
 
-        // Use the BuildingManager3D to upgrade
         var buildingManager = FindObjectOfType<BuildingManager3D>();
         if (buildingManager != null)
         {
@@ -158,27 +302,19 @@ public class BuildingPanelUI3D : MonoBehaviour
             UpdateStatsDisplay();
             UpdateModuleButtonsText();
         }
-        else
-        {
-            Debug.LogError("❌ BuildingManager3D not found!");
-        }
     }
 
     void OnModuleClicked(string moduleName)
     {
         if (!_isInitialized) return;
 
-        // Use the BuildingManager3D to activate module
         var buildingManager = FindObjectOfType<BuildingManager3D>();
         if (buildingManager != null)
         {
             buildingManager.ActivateModule(_config.ID, moduleName);
             UpdateStatsDisplay();
             UpdateModuleButtonsText();
-        }
-        else
-        {
-            Debug.LogError("❌ BuildingManager3D not found!");
+            UpdateModuleButtonAppearance();
         }
     }
 
@@ -208,34 +344,54 @@ public class BuildingPanelUI3D : MonoBehaviour
         }
     }
 
+    void UpdateModuleButtonAppearance()
+    {
+        if (!_isInitialized || _building == null || _building.Modules == null) return;
+
+        for (int i = 0; i < _building.Modules.Count && i < _moduleButtons.Count; i++)
+        {
+            var module = _building.Modules[i];
+            var buttonObj = _moduleButtons[i];
+            var button = buttonObj.GetComponent<Button>();
+            var image = buttonObj.GetComponent<Image>();
+            var text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
+
+            if (module != null)
+            {
+                // Update colors based on max level
+                if (image != null)
+                {
+                    image.color = module.IsMaxLevel() ? maxLevelColor : module.buttonColor;
+                }
+
+                if (text != null)
+                {
+                    text.color = module.IsMaxLevel() ? maxLevelColor : Color.white;
+                }
+
+                // Update interactability
+                if (button != null)
+                {
+                    button.interactable = !module.IsMaxLevel() && module.CanActivate(_building, _economy.Gold);
+                }
+            }
+        }
+    }
+
     void OnCurrencyChanged(double change)
     {
         UpdateBuildingInfo();
+        UpdateModuleButtonsText();
+        UpdateModuleButtonAppearance();
     }
 
     double CalculateTotalIncome()
     {
-        if (_building == null || _building.Modules == null) return 0;
-
-        double totalIncome = 0;
-
-        // Calculate base income from config
         if (_config != null && _data != null && _data.IsUnlocked)
         {
-            totalIncome += _config.GetIncome(_data.Level);
+            return _config.GetIncome(_data.Level);
         }
-
-        // Add income from modules
-        foreach (var module in _building.Modules)
-        {
-            if (module is IncomeModule incomeModule)
-            {
-                // Income modules handle their own income in their Tick method
-                // This is just for display
-            }
-        }
-
-        return totalIncome;
+        return 0;
     }
 
     double CalculateUpgradeCost()

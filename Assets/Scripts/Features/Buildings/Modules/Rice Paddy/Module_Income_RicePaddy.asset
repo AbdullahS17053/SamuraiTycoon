@@ -17,7 +17,13 @@ MonoBehaviour:
   icon: {fileID: 0}
   isActive: 1
   showInUI: 1
-  buttonText: Boast Income
-  baseIncome: 2
+  buttonText: Upgrade
+  buttonColor: {r: 1, g: 1, b: 1, a: 1}
+  maxLevel: 10
+  showMaxLevelWarning: 1
+  activationCost: 100
+  costMultiplier: 1.2
+  baseIncomeBonus: 1
   incomeMultiplier: 1.1
   incomeInterval: 1
+  effectDescription: Increases building income

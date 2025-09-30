@@ -12,15 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e1115f147c3f924b8fbf845dfde6b47, type: 3}
   m_Name: Module_Capacity_RicePaddy
   m_EditorClassIdentifier: 
-  moduleName: 
+  moduleName: RicePaddy_Capacity
   description: 
   icon: {fileID: 0}
   isActive: 1
   showInUI: 1
-  buttonText: Activate
+  buttonText: Upgrade
+  buttonColor: {r: 1, g: 1, b: 1, a: 1}
+  maxLevel: 10
+  showMaxLevelWarning: 1
+  activationCost: 100
+  costMultiplier: 1.2
   baseCapacity: 1
   capacityPerLevel: 1
   maxCapacity: 10
   currentWorkers: 0
   hireCost: 100
   hireCostMultiplier: 1.2
+  effectDescription: Increases workforce capacity

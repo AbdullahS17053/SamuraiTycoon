@@ -24,3 +24,6 @@ MonoBehaviour:
   ThemeColor: {r: 1, g: 1, b: 1, a: 1}
   modules:
   - {fileID: 11400000, guid: 51c66e163d7d0e142b6220a05723289a, type: 2}
+  - {fileID: 11400000, guid: 85ae373a152cf3747974d7dc61ded98f, type: 2}
+  - {fileID: 11400000, guid: 87455e1ad5024554da89ce72f7f43071, type: 2}
+  maxModuleSlots: 3

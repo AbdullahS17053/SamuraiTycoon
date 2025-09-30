@@ -355,4 +355,69 @@ public class BuildingManager3D : MonoBehaviour
         }
         return totalIncome;
     }
+
+    // Add these methods to your existing BuildingManager3D class
+
+    // ========== MODULE MANAGEMENT ==========
+    public bool CanAddModule(string buildingId, BuildingModule module)
+    {
+        var config = GetConfig(buildingId);
+        var building = GetBuildingInstance(buildingId);
+
+        if (config == null || building == null) return false;
+
+        // Check if building has slot available and doesn't already have this module
+        return building.Modules.Count < config.maxModuleSlots &&
+               !building.Modules.Exists(m => m.moduleName == module.moduleName);
+    }
+
+    public void AddModuleToBuilding(string buildingId, BuildingModule module)
+    {
+        if (CanAddModule(buildingId, module))
+        {
+            var building = GetBuildingInstance(buildingId);
+            var config = GetConfig(buildingId);
+
+            // Add module to config (for persistence)
+            if (!config.modules.Contains(module))
+            {
+                config.modules.Add(module);
+            }
+
+            // Reinitialize building to include new module
+            var buildingData = _data.Buildings.Find(b => b.ID == buildingId);
+            BuildingInstances[buildingId] = new Building(config, buildingData);
+
+            Debug.Log($"🔧 Added {module.moduleName} to {config.DisplayName}");
+
+            // Refresh panel if this building is selected
+            if (_currentSelectedBuilding == buildingId)
+            {
+                UpdateBuildingPanel();
+            }
+        }
+    }
+
+    public void RemoveModuleFromBuilding(string buildingId, BuildingModule module)
+    {
+        var config = GetConfig(buildingId);
+        var building = GetBuildingInstance(buildingId);
+
+        if (config != null && building != null)
+        {
+            config.modules.Remove(module);
+
+            // Reinitialize building without the module
+            var buildingData = _data.Buildings.Find(b => b.ID == buildingId);
+            BuildingInstances[buildingId] = new Building(config, buildingData);
+
+            Debug.Log($"🔧 Removed {module.moduleName} from {config.DisplayName}");
+
+            // Refresh panel if this building is selected
+            if (_currentSelectedBuilding == buildingId)
+            {
+                UpdateBuildingPanel();
+            }
+        }
+    }
 }

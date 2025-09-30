@@ -12,14 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 021067ee0dce4994a9cc8b6e4607daec, type: 3}
   m_Name: Module_Speed_RicePaddy
   m_EditorClassIdentifier: 
-  moduleName: 
+  moduleName: RicePaddy_Speed
   description: 
   icon: {fileID: 0}
   isActive: 1
   showInUI: 1
-  buttonText: Activate
-  baseSpeed: 1
-  speedMultiplier: 1.05
-  maxSpeed: 5
-  boostDuration: 30
-  boostMultiplier: 2
+  buttonText: Upgrade
+  buttonColor: {r: 1, g: 1, b: 1, a: 1}
+  maxLevel: 10
+  showMaxLevelWarning: 1
+  activationCost: 100
+  costMultiplier: 1.2
+  baseSpeedMultiplier: 1.1
+  speedIncreasePerLevel: 0.1
+  maxSpeedMultiplier: 3
+  effectDescription: Increases production speed
