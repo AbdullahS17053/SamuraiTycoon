@@ -15,22 +15,37 @@ public class SaveManager
     [Tooltip("Starting gold when resetting (if resetSaveOnStart is true)")]
     public double startingGold = 0;
 
+    // Add this field - it won't be saved to the file
+    [System.NonSerialized] private bool _hasResetBeenProcessed = false;
+
     public void Initialize()
     {
-        // Handle reset option
-        if (resetSaveOnStart)
+        // Only reset once per game session
+        if (resetSaveOnStart && !_hasResetBeenProcessed)
         {
+            Debug.Log("🔄 ResetSaveOnStart is TRUE - deleting save file...");
             ResetGameData();
+            _hasResetBeenProcessed = true;
+        }
+        else if (!resetSaveOnStart)
+        {
+            Debug.Log("💾 ResetSaveOnStart is FALSE - loading existing save...");
+            Data = LoadGame() ?? new GameData();
+        }
+        else
+        {
+            Debug.Log("ℹ️ Reset already processed this session, loading normal save...");
+            Data = LoadGame() ?? new GameData();
         }
 
-        Data = LoadGame() ?? new GameData();
-
-        // Apply starting gold if reset
-        if (resetSaveOnStart && startingGold > 0)
+        // Apply starting gold if this was a reset
+        if (resetSaveOnStart && startingGold > 0 && Data != null)
         {
             Data.Gold = startingGold;
             Debug.Log($"💰 Set starting gold to: {startingGold}");
         }
+
+        Debug.Log($"🎮 Game Data Status - Gold: {Data?.Gold ?? 0}, Reset Flag: {resetSaveOnStart}");
     }
 
     public void SaveGame()
@@ -85,7 +100,6 @@ public class SaveManager
         }
     }
 
-    // CHANGED PARAMETER TYPE to BuildingManager3D
     public double CalculateOfflineEarnings(BuildingManager3D buildingManager)
     {
         if (Data == null || Data.LastSaveTime == default)
@@ -147,6 +161,9 @@ public class SaveManager
                 Data.Gold = startingGold;
             }
 
+            // Force immediate save to prevent reloading old data
+            SaveGame();
+
             Debug.Log("🆕 Game data reset complete!");
             Debug.Log($"💰 Starting gold: {Data.Gold}");
             Debug.Log($"🏗️ Buildings initialized: {Data.Buildings.Count}");
@@ -157,11 +174,21 @@ public class SaveManager
         }
     }
 
+    [ContextMenu("Force Reset Regardless of Checkbox")]
+    public void ForceResetGameData()
+    {
+        resetSaveOnStart = true;
+        _hasResetBeenProcessed = false;
+        ResetGameData();
+    }
+
     [ContextMenu("Print Save File Info")]
     public void PrintSaveInfo()
     {
         Debug.Log($"📁 Save path: {SavePath}");
         Debug.Log($"📊 File exists: {File.Exists(SavePath)}");
+        Debug.Log($"🔄 Reset on start: {resetSaveOnStart}");
+        Debug.Log($"✅ Reset processed: {_hasResetBeenProcessed}");
 
         if (File.Exists(SavePath))
         {
@@ -176,5 +203,13 @@ public class SaveManager
                 Debug.LogError($"❌ Cannot read save file: {e.Message}");
             }
         }
+    }
+
+    // Call this if you want to reset the reset flag (for testing)
+    [ContextMenu("Reset Reset Flag")]
+    public void ResetResetFlag()
+    {
+        _hasResetBeenProcessed = false;
+        Debug.Log("🔄 Reset flag cleared - next initialization will process reset if enabled");
     }
 }

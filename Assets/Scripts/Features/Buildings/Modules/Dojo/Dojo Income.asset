@@ -10,20 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dc49ea7f5944e9845a7e71db4c49fee9, type: 3}
-  m_Name: Module_Income_RicePaddy
+  m_Name: Dojo Income
   m_EditorClassIdentifier: 
-  moduleName: RicePaddy_Income
+  moduleName: Dojo Income
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b0f1d39a7147e4e838466f1da9737f92, type: 3}
   isActive: 1
   showInUI: 1
-  buttonText: Income
+  buttonText: Value
   buttonColor: {r: 1, g: 1, b: 1, a: 1}
-  maxLevel: 10
+  maxLevel: 100
   showMaxLevelWarning: 1
-  activationCost: 100
-  costMultiplier: 1.2
+  activationCost: 125
+  costMultiplier: 1.25
   baseIncomeBonus: 1
-  incomeMultiplier: 1.1
+  incomeMultiplier: 1.2
   incomeInterval: 1
   effectDescription: Increases building income

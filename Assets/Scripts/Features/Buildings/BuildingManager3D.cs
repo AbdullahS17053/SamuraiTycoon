@@ -262,11 +262,6 @@ public class BuildingManager3D : MonoBehaviour
             // Notify building instance about upgrade
             buildingInstance.OnUpgrade(oldLevel, buildingData.Level);
 
-            // Update building object visuals
-            if (BuildingObjects.ContainsKey(buildingId))
-            {
-                BuildingObjects[buildingId].UpdateVisuals();
-            }
 
             Debug.Log($"⬆️ {buildingId} upgraded: Level {oldLevel} → {buildingData.Level}");
             OnBuildingUpgraded?.Invoke(buildingId);

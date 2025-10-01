@@ -6,7 +6,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Manager References - DRAG THIS OBJECT TO ALL FIELDS!")]
     public EconomyManager Economy;
-    public BuildingManager3D Buildings; // ← CHANGED to 3D manager
+    public BuildingManager3D Buildings;
     public UIManager UI;
     public SaveManager Save;
 
@@ -33,7 +33,7 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("🔄 Initializing managers...");
 
-        // Initialize in correct order
+        // Initialize SaveManager FIRST
         Save.Initialize();
         Debug.Log("✅ SaveManager initialized");
 
@@ -41,6 +41,7 @@ public class GameManager : MonoBehaviour
         double offlineEarnings = Save.CalculateOfflineEarnings(Buildings);
         Debug.Log($"💰 Offline earnings calculated: {offlineEarnings}");
 
+        // Initialize other managers
         Economy.Initialize(Save.Data);
         Debug.Log("✅ EconomyManager initialized");
 
@@ -54,11 +55,15 @@ public class GameManager : MonoBehaviour
         UI.Initialize(Save.Data, Economy, Buildings);
         Debug.Log("✅ UIManager initialized");
 
-        // Add offline earnings to economy
-        if (offlineEarnings > 0)
+        // Add offline earnings to economy (unless this was a reset)
+        if (offlineEarnings > 0 && !Save.resetSaveOnStart)
         {
             Economy.AddGold(offlineEarnings);
-            Debug.Log($"💸 Added offline earnings to player");
+            Debug.Log($"💸 Added offline earnings to player: {offlineEarnings}");
+        }
+        else if (Save.resetSaveOnStart)
+        {
+            Debug.Log("🔄 Reset mode - skipping offline earnings");
         }
 
         Debug.Log("🎉 ALL MANAGERS INITIALIZED SUCCESSFULLY!");
@@ -68,7 +73,6 @@ public class GameManager : MonoBehaviour
     {
         // Tick economy and building managers
         Economy.Tick(Time.deltaTime);
-        // BuildingManager3D now handles its own Update tick
     }
 
     void OnApplicationPause(bool pauseStatus)
@@ -92,8 +96,20 @@ public class GameManager : MonoBehaviour
         Debug.Log("🔄 Resetting game runtime...");
 
         Save.ResetGameData();
-        InitializeManagers();
+
+        // Re-initialize all managers with fresh data
+        Economy.Initialize(Save.Data);
+        Buildings.Initialize(Save.Data, Economy);
+        UI.Initialize(Save.Data, Economy, Buildings);
 
         Debug.Log("🎮 Game reset complete! All managers reinitialized.");
+    }
+
+    [ContextMenu("Force Reset Game")]
+    public void ForceResetGame()
+    {
+        Debug.Log("💥 FORCE RESETTING GAME...");
+        Save.ForceResetGameData();
+        ResetGameRuntime();
     }
 }

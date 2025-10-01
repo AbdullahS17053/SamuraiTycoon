@@ -21,8 +21,17 @@ public class BuildingPanelUI3D : MonoBehaviour
     public GameObject moduleButtonPrefab;
     public TextMeshProUGUI moduleSectionTitle;
 
-    [Header("Stats Display")]
-    public TextMeshProUGUI statsText;
+    [Header("Stats Display - Optional Fields")]
+    public TextMeshProUGUI levelStatText;
+    public TextMeshProUGUI incomeStatText;
+    public TextMeshProUGUI upgradeCostStatText;
+    public TextMeshProUGUI statusStatText;
+    public TextMeshProUGUI modulesStatText;
+    public TextMeshProUGUI capacityStatText;
+    public TextMeshProUGUI efficiencyStatText;
+    public TextMeshProUGUI productionStatText;
+
+    [Header("UI Elements")]
     public Slider buildingLevelSlider;
 
     [Header("Visual Settings")]
@@ -30,6 +39,13 @@ public class BuildingPanelUI3D : MonoBehaviour
     public Color affordableColor = Color.green;
     public Color expensiveColor = Color.red;
     public Color normalColor = Color.white;
+
+    [Header("Text Formatting")]
+    public string currencyFormat = "{0} Gold";
+    public string valueFormat = "{0}";
+    public string capacityFormat = "{0}/{1}";
+    public string percentageFormat = "{0}%";
+    public string rateFormat = "{0}/s";
 
     private Building _building;
     private BuildingConfig _config;
@@ -51,23 +67,35 @@ public class BuildingPanelUI3D : MonoBehaviour
         CreateModuleButtons();
 
         _isInitialized = true;
+
+        Debug.Log($"✅ BuildingPanelUI3D initialized for {config.DisplayName}");
     }
 
     void SetupEventListeners()
     {
-        // Remove existing listeners to prevent duplicates
+        // Safely setup upgrade button
         if (upgradeButton != null)
         {
             upgradeButton.onClick.RemoveAllListeners();
             upgradeButton.onClick.AddListener(OnUpgradeClicked);
         }
+        else
+        {
+            Debug.LogWarning("⚠️ UpgradeButton not assigned - upgrade functionality disabled");
+        }
 
+        // Safely setup close button
         if (closeButton != null)
         {
             closeButton.onClick.RemoveAllListeners();
             closeButton.onClick.AddListener(OnCloseClicked);
         }
+        else
+        {
+            Debug.LogWarning("⚠️ CloseButton not assigned - manual close disabled");
+        }
 
+        // Setup economy events
         if (_economy != null)
         {
             _economy.OnGoldChanged -= OnCurrencyChanged;
@@ -86,39 +114,42 @@ public class BuildingPanelUI3D : MonoBehaviour
     {
         if (_config == null || _data == null) return;
 
-        // Basic info
-        if (buildingNameText != null)
-            buildingNameText.text = _config.DisplayName;
-
-        if (buildingLevelText != null)
-            buildingLevelText.text = $"Level {_data.Level}";
-
-        if (buildingDescriptionText != null)
-            buildingDescriptionText.text = _config.Description;
+        // Basic info - safely update each field
+        SafeSetText(buildingNameText, _config.DisplayName);
+        SafeSetText(buildingLevelText, $"Level {_data.Level}");
+        SafeSetText(buildingDescriptionText, _config.Description);
 
         // Income and costs
         double income = CalculateTotalIncome();
         double upgradeCost = CalculateUpgradeCost();
 
-        if (buildingIncomeText != null)
-            buildingIncomeText.text = $"+{FormatNumber(income)}/s";
+        SafeSetText(buildingIncomeText, string.Format(rateFormat, FormatNumber(income)));
 
         if (upgradeCostText != null)
         {
             upgradeCostText.text = _data.Level >= 20 ?
                 "MAX LEVEL" :
-                $"Upgrade: {FormatNumber(upgradeCost)} Gold";
+                string.Format(currencyFormat, FormatNumber(upgradeCost));
 
-            // Color coding for affordability
             upgradeCostText.color = _economy != null && _economy.Gold >= upgradeCost ?
                 affordableColor : expensiveColor;
         }
 
-        // Icon
-        if (buildingIconImage != null && _config.Icon != null)
-            buildingIconImage.sprite = _config.Icon;
+        // Icon - safely update if assigned
+        if (buildingIconImage != null)
+        {
+            if (_config.Icon != null)
+            {
+                buildingIconImage.sprite = _config.Icon;
+                buildingIconImage.color = Color.white;
+            }
+            else
+            {
+                buildingIconImage.color = Color.clear;
+            }
+        }
 
-        // Upgrade button state
+        // Upgrade button state - only if button exists
         if (upgradeButton != null)
         {
             upgradeButton.interactable = _data.Level < 20 &&
@@ -126,7 +157,7 @@ public class BuildingPanelUI3D : MonoBehaviour
                                        _economy.Gold >= upgradeCost;
         }
 
-        // Level slider
+        // Level slider - only if assigned
         if (buildingLevelSlider != null)
         {
             buildingLevelSlider.maxValue = 20;
@@ -134,13 +165,105 @@ public class BuildingPanelUI3D : MonoBehaviour
         }
     }
 
+    void UpdateStatsDisplay()
+    {
+        if (_building == null || _config == null || _data == null) return;
+
+        double income = CalculateTotalIncome();
+        double upgradeCost = CalculateUpgradeCost();
+
+        // Only update stats if their Text components are assigned
+        SafeSetText(levelStatText, string.Format(capacityFormat, _data.Level, 20));
+
+        SafeSetText(incomeStatText, string.Format(rateFormat, FormatNumber(income)));
+
+        if (upgradeCostStatText != null)
+        {
+            upgradeCostStatText.text = _data.Level >= 20 ?
+                "MAXED" :
+                string.Format(currencyFormat, FormatNumber(upgradeCost));
+
+            upgradeCostStatText.color = _data.Level >= 20 ?
+                maxLevelColor :
+                (_economy != null && _economy.Gold >= upgradeCost ? affordableColor : expensiveColor);
+        }
+
+        if (statusStatText != null)
+        {
+            statusStatText.text = _data.IsUnlocked ? "ACTIVE" : "LOCKED";
+            statusStatText.color = _data.IsUnlocked ? affordableColor : expensiveColor;
+        }
+
+        if (modulesStatText != null)
+        {
+            int maxedModules = CountMaxedModules();
+            int totalModules = _building.Modules.Count;
+            modulesStatText.text = string.Format(capacityFormat, totalModules - maxedModules, totalModules);
+        }
+
+        // Capacity stat - only calculate if text field exists
+        if (capacityStatText != null)
+        {
+            var capacityModule = _building.GetModule<CapacityModule>();
+            if (capacityModule != null)
+            {
+                capacityStatText.text = string.Format(capacityFormat,
+                    capacityModule.currentWorkers,
+                    capacityModule.GetMaxCapacity(_building));
+            }
+            else
+            {
+                capacityStatText.text = "N/A";
+            }
+        }
+
+        // Efficiency stat - only calculate if text field exists
+        if (efficiencyStatText != null)
+        {
+            var speedModule = _building.GetModule<SpeedModule>();
+            if (speedModule != null)
+            {
+                efficiencyStatText.text = string.Format(percentageFormat,
+                    (speedModule.GetCurrentSpeedMultiplier() * 100).ToString("F0"));
+            }
+            else
+            {
+                efficiencyStatText.text = "100%";
+            }
+        }
+
+        // Production stat - only calculate if text field exists
+        if (productionStatText != null)
+        {
+            productionStatText.text = string.Format(valueFormat,
+                CalculateProductionMultiplier().ToString("F1") + "x");
+        }
+    }
+
     void CreateModuleButtons()
     {
         ClearModuleButtons();
 
-        if (moduleContainer == null || moduleButtonPrefab == null || _building?.Modules == null)
+        // Check if we have the necessary components
+        if (moduleContainer == null)
+        {
+            Debug.LogWarning("⚠️ ModuleContainer not assigned - module buttons disabled");
             return;
+        }
 
+        if (moduleButtonPrefab == null)
+        {
+            Debug.LogWarning("⚠️ ModuleButtonPrefab not assigned - module buttons disabled");
+            return;
+        }
+
+        if (_building?.Modules == null)
+        {
+            Debug.LogWarning("⚠️ No modules found for building");
+            return;
+        }
+
+        // Create buttons for each module
         foreach (var module in _building.Modules)
         {
             if (module != null && module.showInUI)
@@ -155,13 +278,21 @@ public class BuildingPanelUI3D : MonoBehaviour
     void CreateModuleButton(BuildingModule module)
     {
         var buttonObj = Instantiate(moduleButtonPrefab, moduleContainer);
-        if (buttonObj == null) return;
+        if (buttonObj == null)
+        {
+            Debug.LogError("❌ Failed to instantiate module button");
+            return;
+        }
 
         var controller = buttonObj.GetComponent<ModuleButtonController>();
         if (controller != null)
         {
             controller.Initialize(module, _building, _economy);
             _moduleControllers.Add(controller);
+        }
+        else
+        {
+            Debug.LogWarning($"⚠️ ModuleButtonController not found on {moduleButtonPrefab.name}");
         }
 
         _moduleButtons.Add(buttonObj);
@@ -189,6 +320,7 @@ public class BuildingPanelUI3D : MonoBehaviour
 
     void UpdateModuleSectionTitle()
     {
+        // Only update if the title field exists
         if (moduleSectionTitle != null && _building?.Modules != null)
         {
             int maxedModules = CountMaxedModules();
@@ -197,61 +329,30 @@ public class BuildingPanelUI3D : MonoBehaviour
         }
     }
 
-    void UpdateStatsDisplay()
-    {
-        if (_building == null || _config == null || _data == null) return;
-
-        var stats = new System.Text.StringBuilder();
-
-        stats.AppendLine($"<size=18><b>{_config.DisplayName} Statistics</b></size>\n");
-        stats.AppendLine($"<b>Level:</b> {_data.Level}/20");
-        stats.AppendLine($"<b>Income:</b> {FormatNumber(CalculateTotalIncome())}/s");
-        stats.AppendLine($"<b>Next Upgrade:</b> {FormatNumber(CalculateUpgradeCost())} Gold");
-        stats.AppendLine($"<b>Status:</b> {(_data.IsUnlocked ? "🟢 Active" : "🔴 Locked")}");
-
-        int maxedModules = CountMaxedModules();
-        stats.AppendLine($"<b>Modules:</b> {_building.Modules.Count - maxedModules}/{_building.Modules.Count} Active");
-
-        // Module details
-        if (_building.Modules.Count > 0)
-        {
-            stats.AppendLine($"\n<size=16><b>Active Modules:</b></size>");
-            foreach (var module in _building.Modules)
-            {
-                if (module != null)
-                {
-                    string maxedIndicator = module.IsMaxLevel() ? " 🏆" : "";
-                    stats.AppendLine($"\n<b>{module.moduleName}{maxedIndicator}</b>");
-                    stats.AppendLine(module.GetStatusText(_building));
-                }
-            }
-        }
-
-        if (statsText != null)
-            statsText.text = stats.ToString();
-    }
-
     // Event handlers
     void OnUpgradeClicked()
     {
         var buildingManager = FindObjectOfType<BuildingManager3D>();
-        buildingManager?.UpgradeBuilding(_config.ID);
-
-        // Smooth UI update
-        StartCoroutine(SmoothUIUpdate());
+        if (buildingManager != null)
+        {
+            buildingManager.UpgradeBuilding(_config.ID);
+            StartCoroutine(SmoothUIUpdate());
+        }
     }
 
     void OnModuleClicked(string moduleName)
     {
         var buildingManager = FindObjectOfType<BuildingManager3D>();
-        buildingManager?.ActivateModule(_config.ID, moduleName);
-
-        StartCoroutine(SmoothUIUpdate());
+        if (buildingManager != null)
+        {
+            buildingManager.ActivateModule(_config.ID, moduleName);
+            StartCoroutine(SmoothUIUpdate());
+        }
     }
 
     IEnumerator SmoothUIUpdate()
     {
-        yield return new WaitForEndOfFrame(); // Wait one frame for data to update
+        yield return new WaitForEndOfFrame();
         UpdateAllUI();
         UpdateModuleButtons();
     }
@@ -262,16 +363,48 @@ public class BuildingPanelUI3D : MonoBehaviour
 
         UpdateBuildingInfo();
         UpdateModuleButtons();
+        UpdateStatsDisplay();
     }
 
     void OnCloseClicked()
     {
-        FindObjectOfType<BuildingManager3D>()?.HideBuildingPanel();
+        var buildingManager = FindObjectOfType<BuildingManager3D>();
+        if (buildingManager != null)
+        {
+            buildingManager.HideBuildingPanel();
+        }
     }
 
     // Helper methods
+    void SafeSetText(TextMeshProUGUI textField, string value)
+    {
+        if (textField != null)
+        {
+            textField.text = value;
+        }
+    }
+
     double CalculateTotalIncome() => _config?.GetIncome(_data.Level) ?? 0;
     double CalculateUpgradeCost() => _config?.GetCost(_data.Level) ?? 0;
+
+    double CalculateProductionMultiplier()
+    {
+        double multiplier = 1.0;
+
+        var speedModule = _building.GetModule<SpeedModule>();
+        if (speedModule != null)
+        {
+            multiplier *= speedModule.GetCurrentSpeedMultiplier();
+        }
+
+        var capacityModule = _building.GetModule<CapacityModule>();
+        if (capacityModule != null && capacityModule.GetMaxCapacity(_building) > 0)
+        {
+            multiplier *= (double)capacityModule.currentWorkers / capacityModule.GetMaxCapacity(_building);
+        }
+
+        return multiplier;
+    }
 
     int CountMaxedModules()
     {
@@ -305,9 +438,39 @@ public class BuildingPanelUI3D : MonoBehaviour
 
     void OnDestroy()
     {
+        // Clean up event listeners
         if (_economy != null)
             _economy.OnGoldChanged -= OnCurrencyChanged;
 
+        // Clean up UI elements
         ClearModuleButtons();
+    }
+
+    // Debug method to check which fields are assigned
+    [ContextMenu("Check Assigned Fields")]
+    void CheckAssignedFields()
+    {
+        Debug.Log("=== BuildingPanelUI3D Field Check ===");
+        Debug.Log($"Building Name Text: {buildingNameText != null}");
+        Debug.Log($"Building Level Text: {buildingLevelText != null}");
+        Debug.Log($"Building Description Text: {buildingDescriptionText != null}");
+        Debug.Log($"Building Income Text: {buildingIncomeText != null}");
+        Debug.Log($"Upgrade Cost Text: {upgradeCostText != null}");
+        Debug.Log($"Building Icon: {buildingIconImage != null}");
+        Debug.Log($"Upgrade Button: {upgradeButton != null}");
+        Debug.Log($"Close Button: {closeButton != null}");
+        Debug.Log($"Module Container: {moduleContainer != null}");
+        Debug.Log($"Module Button Prefab: {moduleButtonPrefab != null}");
+        Debug.Log($"Module Section Title: {moduleSectionTitle != null}");
+        Debug.Log($"Level Stat Text: {levelStatText != null}");
+        Debug.Log($"Income Stat Text: {incomeStatText != null}");
+        Debug.Log($"Upgrade Cost Stat Text: {upgradeCostStatText != null}");
+        Debug.Log($"Status Stat Text: {statusStatText != null}");
+        Debug.Log($"Modules Stat Text: {modulesStatText != null}");
+        Debug.Log($"Capacity Stat Text: {capacityStatText != null}");
+        Debug.Log($"Efficiency Stat Text: {efficiencyStatText != null}");
+        Debug.Log($"Production Stat Text: {productionStatText != null}");
+        Debug.Log($"Building Level Slider: {buildingLevelSlider != null}");
+        Debug.Log("=== Field Check Complete ===");
     }
 }

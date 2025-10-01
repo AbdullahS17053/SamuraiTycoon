@@ -9,24 +9,21 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e1115f147c3f924b8fbf845dfde6b47, type: 3}
-  m_Name: Module_Capacity_RicePaddy
+  m_Script: {fileID: 11500000, guid: dc49ea7f5944e9845a7e71db4c49fee9, type: 3}
+  m_Name: Baba Income
   m_EditorClassIdentifier: 
-  moduleName: RicePaddy_Capacity
+  moduleName: Baba Income
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b0f1d39a7147e4e838466f1da9737f92, type: 3}
   isActive: 1
   showInUI: 1
-  buttonText: Capacity
+  buttonText: Value
   buttonColor: {r: 1, g: 1, b: 1, a: 1}
-  maxLevel: 10
+  maxLevel: 100
   showMaxLevelWarning: 1
-  activationCost: 100
+  activationCost: 300
   costMultiplier: 1.2
-  baseCapacity: 1
-  capacityPerLevel: 1
-  maxCapacity: 10
-  currentWorkers: 1
-  hireCost: 100
-  hireCostMultiplier: 1.2
-  effectDescription: Increases workforce capacity
+  baseIncomeBonus: 2
+  incomeMultiplier: 1.1
+  incomeInterval: 1
+  effectDescription: Increases building income

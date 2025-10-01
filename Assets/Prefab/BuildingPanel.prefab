@@ -202,7 +202,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: a8607affc1aec45a0a410ac4d431c934, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -317,7 +317,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: 247bad746118046cdaba744ee30953e1, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -420,7 +420,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &7694991013210413605
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1002,7 +1002,6 @@ GameObject:
   - component: {fileID: 6786001037879264483}
   - component: {fileID: 6742228713147119184}
   - component: {fileID: 5384727084433584040}
-  - component: {fileID: 3204854868208381292}
   m_Layer: 5
   m_Name: Close
   m_TagString: Untagged
@@ -1112,18 +1111,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &3204854868208381292
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3079426344456552196}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f0e57acfe05b09140b53087fdc4a461b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &3530436782329084268
 GameObject:
   m_ObjectHideFlags: 0
@@ -1160,7 +1147,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -100, y: 15}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 59.3, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6189814714854414777
 CanvasRenderer:
@@ -1190,7 +1177,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: cc5e7825cb36e407cb57d2a550424c6c, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2540,12 +2527,24 @@ MonoBehaviour:
   moduleContainer: {fileID: 1362401341940306340}
   moduleButtonPrefab: {fileID: 5055357410103221477, guid: 3153c3035065fd049b39dfa92048daaa, type: 3}
   moduleSectionTitle: {fileID: 2398974950151336053}
-  statsText: {fileID: 6625948742175827440}
+  levelStatText: {fileID: 1221703641906150473}
+  incomeStatText: {fileID: 7024593774607150619}
+  upgradeCostStatText: {fileID: 0}
+  statusStatText: {fileID: 0}
+  modulesStatText: {fileID: 0}
+  capacityStatText: {fileID: 499827368169433183}
+  efficiencyStatText: {fileID: 6625948742175827440}
+  productionStatText: {fileID: 2074812331547850117}
   buildingLevelSlider: {fileID: 8093123299350991751}
-  moduleGridLayout: {fileID: 4577677492453095860}
-  maxModulesPerRow: 4
   maxLevelColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  affordableColor: {r: 0, g: 1, b: 0, a: 1}
+  expensiveColor: {r: 1, g: 0, b: 0, a: 1}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
+  currencyFormat: '{0} Gold'
+  valueFormat: '{0}'
+  capacityFormat: '{0}/{1}'
+  percentageFormat: '{0}%'
+  rateFormat: '{0}/s'
 --- !u!1 &7477824435873710924
 GameObject:
   m_ObjectHideFlags: 0
@@ -2660,7 +2659,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -300, y: 15}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 128.18, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2950064231921569946
 CanvasRenderer:
@@ -2690,7 +2689,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: cf82b050240a44b748aec03845a7e4e2, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
