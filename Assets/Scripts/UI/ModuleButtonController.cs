@@ -31,7 +31,7 @@ public class ModuleButtonController : MonoBehaviour
     private TextMeshProUGUI FindTextComponent(params string[] possibleNames)
     {
         TextMeshProUGUI[] allTexts = GetComponentsInChildren<TextMeshProUGUI>(true);
-        
+
         if (allTexts.Length == 0) return null;
 
         foreach (var text in allTexts)
@@ -53,9 +53,9 @@ public class ModuleButtonController : MonoBehaviour
         _currentModule = module;
         _currentBuilding = building;
         _currentEconomy = economy;
-        
+
         UpdateUI();
-        
+
         // Set up button click
         if (button != null)
         {
@@ -91,8 +91,8 @@ public class ModuleButtonController : MonoBehaviour
         // Update cost and level
         if (costText != null)
         {
-            costText.text = _currentModule.IsMaxLevel() ? 
-                "MAXED OUT" : 
+            costText.text = _currentModule.IsMaxLevel() ?
+                "MAXED OUT" :
                 $"Cost: {FormatNumber(_currentModule.GetCurrentCost(_currentModule.GetCurrentLevel()))}";
         }
 
@@ -104,10 +104,10 @@ public class ModuleButtonController : MonoBehaviour
         // Update colors with smooth transitions
         if (backgroundImage != null)
         {
-            Color targetColor = _currentModule.IsMaxLevel() ? 
-                Color.yellow : 
+            Color targetColor = _currentModule.IsMaxLevel() ?
+                Color.yellow :
                 (_currentModule.buttonColor != Color.clear ? _currentModule.buttonColor : Color.white);
-            
+
             backgroundImage.color = Color.Lerp(backgroundImage.color, targetColor, Time.deltaTime * 10f);
         }
 
@@ -121,11 +121,11 @@ public class ModuleButtonController : MonoBehaviour
         // Update button interactability with smooth transition
         if (button != null)
         {
-            bool shouldBeInteractable = !_currentModule.IsMaxLevel() && 
+            bool shouldBeInteractable = !_currentModule.IsMaxLevel() &&
                                       _currentModule.CanActivate(_currentBuilding, _currentEconomy.Gold);
-            
+
             button.interactable = shouldBeInteractable;
-            
+
             // Visual feedback for affordable/not affordable
             if (!shouldBeInteractable && !_currentModule.IsMaxLevel())
             {
@@ -150,16 +150,16 @@ public class ModuleButtonController : MonoBehaviour
     private string FormatNumber(double num)
     {
         if (num < 1000) return num.ToString("F0");
-        
+
         string[] suffixes = { "", "K", "M", "B", "T" };
         int suffixIndex = 0;
-        
+
         while (num >= 1000 && suffixIndex < suffixes.Length - 1)
         {
             num /= 1000;
             suffixIndex++;
         }
-        
+
         return num.ToString("F2") + suffixes[suffixIndex];
     }
 }

@@ -455,4 +455,12 @@ public class BuildingManager3D : MonoBehaviour
         Debug.Log($"Current Selected: {_currentSelectedBuilding}");
         Debug.Log("=== DEBUG COMPLETE ===");
     }
+    // Add this method to BuildingManager3D class
+    public void RefreshUI()
+    {
+        if (!string.IsNullOrEmpty(_currentSelectedBuilding))
+        {
+            UpdateBuildingPanel();
+        }
+    }
 }

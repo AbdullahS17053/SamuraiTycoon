@@ -3831,7 +3831,6 @@ GameObject:
   - component: {fileID: 1256733583}
   - component: {fileID: 1256733584}
   - component: {fileID: 1256733586}
-  - component: {fileID: 1256733585}
   m_Layer: 0
   m_Name: Game Managers
   m_TagString: Untagged
@@ -3879,19 +3878,7 @@ MonoBehaviour:
     peasantsText: {fileID: 1576213385}
   Save:
     resetSaveOnStart: 1
-    startingGold: 1000
---- !u!114 &1256733585
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1256733582}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3ec6efda79d20a4da2bf54c30edad49, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+    startingGold: 10000
 --- !u!114 &1256733586
 MonoBehaviour:
   m_ObjectHideFlags: 0
