@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 public class ModuleButtonController : MonoBehaviour
 {
-    [Header("UI References - Auto-assigned if not set")]
+    [Header("UI References")]
     public Button button;
     public TextMeshProUGUI titleText;
     public TextMeshProUGUI descriptionText;
@@ -13,80 +13,153 @@ public class ModuleButtonController : MonoBehaviour
     public Image backgroundImage;
     public Image iconImage;
 
+    private BuildingModule _currentModule;
+    private Building _currentBuilding;
+    private EconomyManager _currentEconomy;
+
     void Awake()
     {
-        // Auto-assign references if not set
+        // Auto-assign with better fallbacks
         if (button == null) button = GetComponentInChildren<Button>();
-        if (titleText == null) titleText = FindTextComponent("title", "name");
-        if (descriptionText == null) descriptionText = FindTextComponent("description", "desc");
-        if (costText == null) costText = FindTextComponent("cost", "price");
-        if (levelText == null) levelText = FindTextComponent("level", "lvl");
-        if (backgroundImage == null) backgroundImage = GetComponentInChildren<Image>();
+        if (titleText == null) titleText = FindTextComponent("title", "name", "header");
+        if (descriptionText == null) descriptionText = FindTextComponent("description", "desc", "info");
+        if (costText == null) costText = FindTextComponent("cost", "price", "value");
+        if (levelText == null) levelText = FindTextComponent("level", "lvl", "count");
+        if (backgroundImage == null) backgroundImage = GetComponent<Image>() ?? GetComponentInChildren<Image>();
     }
 
     private TextMeshProUGUI FindTextComponent(params string[] possibleNames)
     {
         TextMeshProUGUI[] allTexts = GetComponentsInChildren<TextMeshProUGUI>(true);
+        
+        if (allTexts.Length == 0) return null;
 
         foreach (var text in allTexts)
         {
+            string lowerName = text.name.ToLower();
             foreach (string name in possibleNames)
             {
-                if (text.name.ToLower().Contains(name))
+                if (lowerName.Contains(name.ToLower()))
                     return text;
             }
         }
 
         // Return first text if no specific one found
-        return allTexts.Length > 0 ? allTexts[0] : null;
+        return allTexts[0];
     }
 
     public void Initialize(BuildingModule module, Building building, EconomyManager economy)
     {
-        // Update all UI elements based on module data
-        UpdateUI(module, building, economy);
+        _currentModule = module;
+        _currentBuilding = building;
+        _currentEconomy = economy;
+        
+        UpdateUI();
+        
+        // Set up button click
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            if (!module.IsMaxLevel())
+            {
+                button.onClick.AddListener(OnButtonClicked);
+            }
+        }
     }
 
-    public void UpdateUI(BuildingModule module, Building building, EconomyManager economy)
+    private void OnButtonClicked()
     {
+        if (_currentModule != null && _currentBuilding != null)
+        {
+            _currentModule.OnButtonClick(_currentBuilding);
+            UpdateUI(); // Immediate feedback
+        }
+    }
+
+    public void UpdateUI()
+    {
+        if (_currentModule == null || _currentBuilding == null || _currentEconomy == null) return;
+
         // Update title
         if (titleText != null)
-            titleText.text = module.buttonText;
+            titleText.text = _currentModule.buttonText;
 
         // Update description
         if (descriptionText != null)
-            descriptionText.text = module.GetEffectDescription();
+            descriptionText.text = _currentModule.GetEffectDescription();
 
         // Update cost and level
-        string status = module.GetStatusText(building);
         if (costText != null)
         {
-            // Extract cost from status or use module data
-            costText.text = module.IsMaxLevel() ? "MAXED OUT" : $"Cost: {module.GetCurrentCost(module.GetCurrentLevel())}";
+            costText.text = _currentModule.IsMaxLevel() ? 
+                "MAXED OUT" : 
+                $"Cost: {FormatNumber(_currentModule.GetCurrentCost(_currentModule.GetCurrentLevel()))}";
         }
 
         if (levelText != null)
         {
-            levelText.text = $"Level: {module.GetCurrentLevel()}/{module.maxLevel}";
+            levelText.text = $"Level: {_currentModule.GetCurrentLevel()}/{_currentModule.maxLevel}";
         }
 
-        // Update colors
+        // Update colors with smooth transitions
         if (backgroundImage != null)
         {
-            backgroundImage.color = module.IsMaxLevel() ? Color.yellow :
-                                  (module.buttonColor != Color.clear ? module.buttonColor : Color.white);
+            Color targetColor = _currentModule.IsMaxLevel() ? 
+                Color.yellow : 
+                (_currentModule.buttonColor != Color.clear ? _currentModule.buttonColor : Color.white);
+            
+            backgroundImage.color = Color.Lerp(backgroundImage.color, targetColor, Time.deltaTime * 10f);
         }
 
         // Update icon
-        if (iconImage != null && module.icon != null)
+        if (iconImage != null && _currentModule.icon != null)
         {
-            iconImage.sprite = module.icon;
+            iconImage.sprite = _currentModule.icon;
+            iconImage.color = _currentModule.IsMaxLevel() ? new Color(1, 1, 1, 0.7f) : Color.white;
         }
 
-        // Update button interactability
+        // Update button interactability with smooth transition
         if (button != null)
         {
-            button.interactable = !module.IsMaxLevel() && module.CanActivate(building, economy.Gold);
+            bool shouldBeInteractable = !_currentModule.IsMaxLevel() && 
+                                      _currentModule.CanActivate(_currentBuilding, _currentEconomy.Gold);
+            
+            button.interactable = shouldBeInteractable;
+            
+            // Visual feedback for affordable/not affordable
+            if (!shouldBeInteractable && !_currentModule.IsMaxLevel())
+            {
+                button.image.color = Color.Lerp(button.image.color, Color.gray, Time.deltaTime * 8f);
+            }
+            else
+            {
+                button.image.color = Color.Lerp(button.image.color, Color.white, Time.deltaTime * 8f);
+            }
         }
+    }
+
+    void Update()
+    {
+        // Smooth continuous updates for affordability states
+        if (_currentModule != null && !_currentModule.IsMaxLevel())
+        {
+            UpdateUI();
+        }
+    }
+
+    private string FormatNumber(double num)
+    {
+        if (num < 1000) return num.ToString("F0");
+        
+        string[] suffixes = { "", "K", "M", "B", "T" };
+        int suffixIndex = 0;
+        
+        while (num >= 1000 && suffixIndex < suffixes.Length - 1)
+        {
+            num /= 1000;
+            suffixIndex++;
+        }
+        
+        return num.ToString("F2") + suffixes[suffixIndex];
     }
 }

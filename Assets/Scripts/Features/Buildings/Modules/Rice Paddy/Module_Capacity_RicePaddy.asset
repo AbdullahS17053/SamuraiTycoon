@@ -17,7 +17,7 @@ MonoBehaviour:
   icon: {fileID: 0}
   isActive: 1
   showInUI: 1
-  buttonText: Upgrade
+  buttonText: Capacity
   buttonColor: {r: 1, g: 1, b: 1, a: 1}
   maxLevel: 10
   showMaxLevelWarning: 1
@@ -26,7 +26,7 @@ MonoBehaviour:
   baseCapacity: 1
   capacityPerLevel: 1
   maxCapacity: 10
-  currentWorkers: 0
+  currentWorkers: 1
   hireCost: 100
   hireCostMultiplier: 1.2
   effectDescription: Increases workforce capacity
