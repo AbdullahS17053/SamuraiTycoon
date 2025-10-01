@@ -420,4 +420,39 @@ public class BuildingManager3D : MonoBehaviour
             }
         }
     }
+
+    // Add this method to BuildingManager3D.cs for debugging
+    [ContextMenu("Debug Building Setup")]
+    public void DebugBuildingSetup()
+    {
+        Debug.Log("=== BUILDING MANAGER DEBUG ===");
+        Debug.Log($"All Buildings Count: {AllBuildings.Count}");
+
+        foreach (var config in AllBuildings)
+        {
+            if (config != null)
+            {
+                Debug.Log($"Building: {config.DisplayName} (ID: {config.ID})");
+                Debug.Log($"- Modules: {config.modules?.Count ?? 0}");
+                if (config.modules != null)
+                {
+                    foreach (var module in config.modules)
+                    {
+                        if (module != null)
+                        {
+                            Debug.Log($"  - Module: {module.moduleName} (ShowInUI: {module.showInUI})");
+                        }
+                    }
+                }
+
+                var buildingData = _data?.Buildings?.Find(b => b.ID == config.ID);
+                Debug.Log($"- Building Data: {(buildingData != null ? "Found" : "Not Found")}");
+            }
+        }
+
+        Debug.Log($"Building Instances: {BuildingInstances.Count}");
+        Debug.Log($"Building Objects: {BuildingObjects.Count}");
+        Debug.Log($"Current Selected: {_currentSelectedBuilding}");
+        Debug.Log("=== DEBUG COMPLETE ===");
+    }
 }

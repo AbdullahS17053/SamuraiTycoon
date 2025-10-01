@@ -25,8 +25,7 @@ public class BuildingPanelUI3D : MonoBehaviour
     public Slider buildingLevelSlider;
 
     [Header("Module Grid Layout")]
-    public VerticalLayoutGroup moduleGridLayout;
-    public int maxModulesPerRow = 2;
+    public GridLayoutGroup moduleGridLayout;
 
     [Header("Max Level Colors")]
     public Color maxLevelColor = Color.yellow;
@@ -37,7 +36,6 @@ public class BuildingPanelUI3D : MonoBehaviour
     private BuildingData _data;
     private EconomyManager _economy;
     private List<GameObject> _moduleButtons = new List<GameObject>();
-    private bool _isInitialized = false;
 
     public void Initialize(Building building, BuildingConfig config, BuildingData data, EconomyManager economy)
     {
@@ -48,6 +46,7 @@ public class BuildingPanelUI3D : MonoBehaviour
         _data = data;
         _economy = economy;
 
+
         // Debug module information
         Debug.Log($"🔍 Building: {config.DisplayName}");
         Debug.Log($"🔍 Building Modules Count: {_building?.Modules?.Count ?? 0}");
@@ -55,54 +54,68 @@ public class BuildingPanelUI3D : MonoBehaviour
         {
             foreach (var module in _building.Modules)
             {
-                Debug.Log($"🔍 Module: {module?.moduleName} (ShowInUI: {module?.showInUI})");
+                if (module != null)
+                {
+                    Debug.Log($"🔍 Module: {module.moduleName} (ShowInUI: {module.showInUI})");
+                }
             }
         }
 
-
+        // Initialize UI components
         UpdateBuildingInfo();
         CreateModuleButtons();
         UpdateStatsDisplay();
 
         // Subscribe to events
-        upgradeButton.onClick.AddListener(OnUpgradeClicked);
-        closeButton.onClick.AddListener(OnCloseClicked);
+        if (upgradeButton != null)
+            upgradeButton.onClick.AddListener(OnUpgradeClicked);
+        else
+            Debug.LogError("❌ UpgradeButton is null!");
+
+        if (closeButton != null)
+            closeButton.onClick.AddListener(OnCloseClicked);
+        else
+            Debug.LogError("❌ CloseButton is null!");
 
         if (_economy != null)
         {
             _economy.OnGoldChanged += OnCurrencyChanged;
         }
-        else
-        {
-            Debug.LogWarning("❌ EconomyManager is null!");
-        }
 
-        _isInitialized = true;
-        Debug.Log($"✅ BuildingPanelUI3D initialized for: {config.DisplayName}");
+        Debug.Log($"✅ BuildingPanelUI3D initialized successfully for: {config.DisplayName}");
     }
 
     void UpdateBuildingInfo()
     {
-        if (!_isInitialized || _config == null || _data == null)
+        if (_config == null || _data == null)
         {
-            Debug.LogError("❌ Cannot update building info - not initialized!");
+            Debug.LogError("❌ Cannot update building info - config or data is null!");
             return;
         }
 
-        buildingNameText.text = _config.DisplayName;
-        buildingLevelText.text = $"Level {_data.Level}";
-        buildingDescriptionText.text = _config.Description;
+        // Update basic building info
+        if (buildingNameText != null)
+            buildingNameText.text = _config.DisplayName;
+
+        if (buildingLevelText != null)
+            buildingLevelText.text = $"Level {_data.Level}";
+
+        if (buildingDescriptionText != null)
+            buildingDescriptionText.text = _config.Description;
 
         double income = CalculateTotalIncome();
-        buildingIncomeText.text = $"+{FormatNumber(income)}/s";
+        if (buildingIncomeText != null)
+            buildingIncomeText.text = $"+{FormatNumber(income)}/s";
 
         double upgradeCost = CalculateUpgradeCost();
-        upgradeCostText.text = $"Upgrade: {FormatNumber(upgradeCost)} Gold";
+        if (upgradeCostText != null)
+            upgradeCostText.text = $"Upgrade: {FormatNumber(upgradeCost)} Gold";
 
         if (buildingIconImage != null && _config.Icon != null)
             buildingIconImage.sprite = _config.Icon;
 
-        upgradeButton.interactable = _economy != null && _economy.Gold >= upgradeCost;
+        if (upgradeButton != null)
+            upgradeButton.interactable = _economy != null && _economy.Gold >= upgradeCost;
 
         // Update level slider
         if (buildingLevelSlider != null)
@@ -123,11 +136,13 @@ public class BuildingPanelUI3D : MonoBehaviour
     {
         Debug.Log($"🔧 CreateModuleButtons called");
 
-        if (!_isInitialized)
+        // Clear existing buttons
+        foreach (var button in _moduleButtons)
         {
-            Debug.LogError("❌ Not initialized!");
-            return;
+            if (button != null)
+                Destroy(button);
         }
+        _moduleButtons.Clear();
 
         if (moduleContainer == null)
         {
@@ -141,20 +156,15 @@ public class BuildingPanelUI3D : MonoBehaviour
             return;
         }
 
-        // Clear existing buttons
-        foreach (var button in _moduleButtons)
-            Destroy(button);
-        _moduleButtons.Clear();
-
         if (_building == null)
         {
             Debug.LogError("❌ Building is null!");
             return;
         }
 
-        if (_building.Modules == null)
+        if (_building.Modules == null || _building.Modules.Count == 0)
         {
-            Debug.LogWarning("⚠️ No modules found for building");
+            Debug.LogWarning($"⚠️ No modules found for building: {_config.DisplayName}");
             return;
         }
 
@@ -165,8 +175,10 @@ public class BuildingPanelUI3D : MonoBehaviour
         {
             if (module != null && module.showInUI)
             {
-                CreateModuleButton(module);
-                createdButtons++;
+                if (CreateModuleButton(module))
+                {
+                    createdButtons++;
+                }
             }
             else
             {
@@ -174,73 +186,145 @@ public class BuildingPanelUI3D : MonoBehaviour
             }
         }
 
-        Debug.Log($"🔧 Created {createdButtons} module buttons for {_config.DisplayName}");
+        Debug.Log($"✅ Created {createdButtons} module buttons for {_config.DisplayName}");
     }
 
-    void CreateModuleButton(BuildingModule module)
+    bool CreateModuleButton(BuildingModule module)
     {
         Debug.Log($"🔧 Creating button for module: {module.moduleName}");
 
         if (moduleButtonPrefab == null)
         {
             Debug.LogError("❌ Module button prefab is null!");
-            return;
+            return false;
         }
 
         var buttonObj = Instantiate(moduleButtonPrefab, moduleContainer);
         if (buttonObj == null)
         {
             Debug.LogError("❌ Failed to instantiate button object!");
-            return;
+            return false;
         }
 
-        var button = buttonObj.GetComponent<Button>();
-        var text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
-        var image = buttonObj.GetComponent<Image>();
-
-        if (button == null) Debug.LogError("❌ Button component missing!");
-        if (text == null) Debug.LogError("❌ TextMeshPro component missing!");
-        if (image == null) Debug.LogError("❌ Image component missing!");
-
-        // Set button appearance based on max level
-        if (image != null)
+        // Try to use ModuleButtonController if available
+        ModuleButtonController buttonController = buttonObj.GetComponent<ModuleButtonController>();
+        if (buttonController != null)
         {
-            image.color = module.IsMaxLevel() ? maxLevelColor : module.buttonColor;
-        }
+            // Use the controller to set up the button
+            buttonController.Initialize(module, _building, _economy);
 
-        if (text != null)
-        {
-            text.text = $"{module.buttonText}\n{module.GetStatusText(_building)}";
-
-            // Change text color for max level
-            if (module.IsMaxLevel())
+            // Set up click listener
+            if (!module.IsMaxLevel())
             {
-                text.color = maxLevelColor;
+                string moduleName = module.moduleName;
+                buttonController.button.onClick.AddListener(() => OnModuleClicked(moduleName));
             }
-        }
-
-        // Add click handler (only if not max level)
-        if (!module.IsMaxLevel())
-        {
-            string moduleName = module.moduleName;
-            button.onClick.AddListener(() => OnModuleClicked(moduleName));
-            Debug.Log($"🔧 Added click listener for module: {moduleName}");
+            else
+            {
+                buttonController.button.interactable = false;
+            }
         }
         else
         {
-            button.interactable = false;
-            Debug.Log($"🔧 Module {module.moduleName} is max level - button disabled");
+            // Fallback to the flexible system
+            Button button = FindButtonInChildren(buttonObj);
+            if (button == null)
+            {
+                Debug.LogError("❌ No Button component found in module button prefab!");
+                Destroy(buttonObj);
+                return false;
+            }
+
+            TextMeshProUGUI[] textComponents = buttonObj.GetComponentsInChildren<TextMeshProUGUI>(true);
+            TextMeshProUGUI mainText = textComponents.Length > 0 ? textComponents[0] : null;
+
+            UpdateModuleButtonUI(buttonObj, button, mainText, module);
+
+            if (!module.IsMaxLevel())
+            {
+                string moduleName = module.moduleName;
+                button.onClick.AddListener(() => OnModuleClicked(moduleName));
+            }
+            else
+            {
+                button.interactable = false;
+            }
         }
 
         _moduleButtons.Add(buttonObj);
         Debug.Log($"✅ Successfully created button for module: {module.moduleName}");
+        return true;
     }
 
-    // ... rest of the methods remain the same as before ...
+    Button FindButtonInChildren(GameObject parent)
+    {
+        // First try to find a button in the entire hierarchy
+        Button button = parent.GetComponentInChildren<Button>(true);
+
+        if (button != null)
+        {
+            return button;
+        }
+
+        // If no button found, try to find by common names
+        Transform purchaseChild = parent.transform.Find("purchase");
+        if (purchaseChild != null)
+        {
+            button = purchaseChild.GetComponent<Button>();
+            if (button != null) return button;
+        }
+
+        Transform buttonChild = parent.transform.Find("button");
+        if (buttonChild != null)
+        {
+            button = buttonChild.GetComponent<Button>();
+            if (button != null) return button;
+        }
+
+        Transform btnChild = parent.transform.Find("btn");
+        if (btnChild != null)
+        {
+            button = btnChild.GetComponent<Button>();
+            if (button != null) return button;
+        }
+
+        return null;
+    }
+
+    void UpdateModuleButtonUI(GameObject buttonObj, Button button, TextMeshProUGUI mainText, BuildingModule module)
+    {
+        if (mainText != null)
+        {
+            // Create a formatted string with module information
+            string status = module.GetStatusText(_building);
+            string formattedText = $"{module.buttonText}\n{status}";
+            mainText.text = formattedText;
+
+            // Change text color for max level
+            if (module.IsMaxLevel())
+            {
+                mainText.color = maxLevelColor;
+            }
+        }
+
+        // Update button appearance
+        Image buttonImage = button.GetComponent<Image>();
+        if (buttonImage != null)
+        {
+            Color buttonColor = module.buttonColor;
+            if (buttonColor == Color.clear) // Use default if not set
+                buttonColor = normalColor;
+
+            buttonImage.color = module.IsMaxLevel() ? maxLevelColor : buttonColor;
+        }
+
+        // Update button interactability
+        button.interactable = !module.IsMaxLevel() && module.CanActivate(_building, _economy.Gold);
+    }
 
     void UpdateStatsDisplay()
     {
-        if (!_isInitialized || _building == null) return;
+        if (_building == null) return;
 
         string stats = $"<size=18><b>{_config.DisplayName} Statistics</b></size>\n\n";
         stats += $"<b>Level:</b> {_data.Level}\n";
@@ -292,30 +376,31 @@ public class BuildingPanelUI3D : MonoBehaviour
 
     void OnUpgradeClicked()
     {
-        if (!_isInitialized) return;
-
         var buildingManager = FindObjectOfType<BuildingManager3D>();
         if (buildingManager != null)
         {
             buildingManager.UpgradeBuilding(_config.ID);
             UpdateBuildingInfo();
             UpdateStatsDisplay();
-            UpdateModuleButtonsText();
+            UpdateModuleButtons();
         }
     }
 
     void OnModuleClicked(string moduleName)
     {
-        if (!_isInitialized) return;
-
         var buildingManager = FindObjectOfType<BuildingManager3D>();
         if (buildingManager != null)
         {
             buildingManager.ActivateModule(_config.ID, moduleName);
             UpdateStatsDisplay();
-            UpdateModuleButtonsText();
-            UpdateModuleButtonAppearance();
+            UpdateModuleButtons();
         }
+    }
+
+    void UpdateModuleButtons()
+    {
+        // Recreate all module buttons to reflect updated state
+        CreateModuleButtons();
     }
 
     void OnCloseClicked()
@@ -327,62 +412,10 @@ public class BuildingPanelUI3D : MonoBehaviour
         }
     }
 
-    void UpdateModuleButtonsText()
-    {
-        if (!_isInitialized || _building == null || _building.Modules == null) return;
-
-        for (int i = 0; i < _building.Modules.Count && i < _moduleButtons.Count; i++)
-        {
-            var module = _building.Modules[i];
-            var buttonObj = _moduleButtons[i];
-            var text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
-
-            if (text != null && module != null)
-            {
-                text.text = $"{module.buttonText}\n{module.GetStatusText(_building)}";
-            }
-        }
-    }
-
-    void UpdateModuleButtonAppearance()
-    {
-        if (!_isInitialized || _building == null || _building.Modules == null) return;
-
-        for (int i = 0; i < _building.Modules.Count && i < _moduleButtons.Count; i++)
-        {
-            var module = _building.Modules[i];
-            var buttonObj = _moduleButtons[i];
-            var button = buttonObj.GetComponent<Button>();
-            var image = buttonObj.GetComponent<Image>();
-            var text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
-
-            if (module != null)
-            {
-                // Update colors based on max level
-                if (image != null)
-                {
-                    image.color = module.IsMaxLevel() ? maxLevelColor : module.buttonColor;
-                }
-
-                if (text != null)
-                {
-                    text.color = module.IsMaxLevel() ? maxLevelColor : Color.white;
-                }
-
-                // Update interactability
-                if (button != null)
-                {
-                    button.interactable = !module.IsMaxLevel() && module.CanActivate(_building, _economy.Gold);
-                }
-            }
-        }
-    }
-
     void OnCurrencyChanged(double change)
     {
         UpdateBuildingInfo();
-        UpdateModuleButtonsText();
-        UpdateModuleButtonAppearance();
+        UpdateModuleButtons();
     }
 
     double CalculateTotalIncome()
@@ -423,5 +456,52 @@ public class BuildingPanelUI3D : MonoBehaviour
     {
         if (_economy != null)
             _economy.OnGoldChanged -= OnCurrencyChanged;
+
+        // Clean up spawned buttons
+        foreach (var button in _moduleButtons)
+        {
+            if (button != null)
+                Destroy(button);
+        }
+        _moduleButtons.Clear();
+    }
+
+    // Enhanced test method for your specific prefab structure
+    [ContextMenu("Test Prefab Structure")]
+    public void TestPrefabStructure()
+    {
+        if (moduleButtonPrefab == null)
+        {
+            Debug.LogError("❌ No module button prefab assigned!");
+            return;
+        }
+
+        Debug.Log("🧪 Testing Prefab Structure...");
+
+        // Test instantiation
+        var testObj = Instantiate(moduleButtonPrefab);
+
+        // Find button
+        Button button = FindButtonInChildren(testObj);
+        if (button != null)
+        {
+            Debug.Log($"✅ Found Button: {button.name}");
+        }
+        else
+        {
+            Debug.LogError("❌ No button found in prefab!");
+        }
+
+        // Find texts
+        TextMeshProUGUI[] texts = testObj.GetComponentsInChildren<TextMeshProUGUI>(true);
+        Debug.Log($"✅ Found {texts.Length} TextMeshPro components:");
+        foreach (var text in texts)
+        {
+            Debug.Log($"   - {text.name}: '{text.text}'");
+        }
+
+        // Clean up
+        DestroyImmediate(testObj);
+        Debug.Log("✅ Prefab structure test completed");
     }
 }

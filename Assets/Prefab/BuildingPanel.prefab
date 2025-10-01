@@ -781,7 +781,6 @@ GameObject:
   - component: {fileID: 8834709160870767843}
   - component: {fileID: 8121215404965704213}
   - component: {fileID: 6798305430146183577}
-  - component: {fileID: 6687218061050690931}
   m_Layer: 5
   m_Name: Title
   m_TagString: Untagged
@@ -855,25 +854,6 @@ MonoBehaviour:
   radiusTR: -1
   radiusBL: -1
   radiusBR: -1
---- !u!114 &6687218061050690931
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2875438357660472916}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dda8fef4782c4a146b263d4cd70d3986, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  NameText: {fileID: 8880562562660305835}
-  LevelText: {fileID: 2398974950151336053}
-  CostText: {fileID: 0}
-  IncomeText: {fileID: 0}
-  IconImage: {fileID: 0}
-  UpgradeButton: {fileID: 5384727084433584040}
-  BuildingID: rice_paddy
 --- !u!1 &3002880735092991126
 GameObject:
   m_ObjectHideFlags: 0
@@ -2558,9 +2538,14 @@ MonoBehaviour:
   upgradeButton: {fileID: 6598811103537430215}
   closeButton: {fileID: 5384727084433584040}
   moduleContainer: {fileID: 1362401341940306340}
-  moduleButtonPrefab: {fileID: 5584582356247795945, guid: fdb87f60556088d499b9e51bd805e04a, type: 3}
+  moduleButtonPrefab: {fileID: 5055357410103221477, guid: 3153c3035065fd049b39dfa92048daaa, type: 3}
+  moduleSectionTitle: {fileID: 2398974950151336053}
   statsText: {fileID: 6625948742175827440}
   buildingLevelSlider: {fileID: 8093123299350991751}
+  moduleGridLayout: {fileID: 4577677492453095860}
+  maxModulesPerRow: 4
+  maxLevelColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &7477824435873710924
 GameObject:
   m_ObjectHideFlags: 0
@@ -2724,7 +2709,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1362401341940306340}
-  - component: {fileID: 6100244378506439653}
+  - component: {fileID: 4577677492453095860}
   m_Layer: 5
   m_Name: Buttons
   m_TagString: Untagged
@@ -2751,7 +2736,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 1000}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &6100244378506439653
+--- !u!114 &4577677492453095860
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2760,23 +2745,21 @@ MonoBehaviour:
   m_GameObject: {fileID: 7655196492231793219}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
+  m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 15
-    m_Right: 15
+    m_Left: 0
+    m_Right: 0
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 1
-  m_Spacing: 25
-  m_ChildForceExpandWidth: 0
-  m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 0
-  m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
-  m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
+  m_StartCorner: 1
+  m_StartAxis: 1
+  m_CellSize: {x: 975, y: 175}
+  m_Spacing: {x: 0, y: 25}
+  m_Constraint: 0
+  m_ConstraintCount: 2
 --- !u!1 &8383984245241553496
 GameObject:
   m_ObjectHideFlags: 0
