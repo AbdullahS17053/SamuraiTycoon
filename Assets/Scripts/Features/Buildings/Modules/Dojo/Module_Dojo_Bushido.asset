@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc49ea7f5944e9845a7e71db4c49fee9, type: 3}
+  m_Name: Module_Dojo_Bushido
+  m_EditorClassIdentifier: 
+  moduleName: Bushido Code
+  description: Teach the way of the warrior for increased honor and gold
+  icon: {fileID: 0}
+  isActive: 1
+  showInUI: 1
+  buttonText: Train Bushido
+  buttonColor: {r: 1, g: 1, b: 1, a: 1}
+  maxLevel: 8
+  showMaxLevelWarning: 1
+  activationCost: 150
+  costMultiplier: 1.3
+  baseIncomeBonus: 3
+  incomeMultiplier: 1.15
+  incomeInterval: 1
+  effectDescription: Increases gold generation through warrior discipline

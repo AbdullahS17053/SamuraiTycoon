@@ -73,6 +73,10 @@ public class Web3Manager : MonoBehaviour
             Destroy(gameObject);
         }
     }
+    public void Initialize(GameData data)
+    {
+        Debug.Log("✅ Web3Manager initialized");
+    }
 
     void InitializeWeb3Data()
     {
@@ -249,6 +253,16 @@ public class Web3Manager : MonoBehaviour
         }
 
         UpdateWeb3UI();
+    }
+    // Add any Web3-specific initialization here
+    public void ConnectWallet()
+    {
+        Debug.Log("🔗 Wallet connection placeholder");
+    }
+
+    public void CheckNFTs()
+    {
+        Debug.Log("🖼️ NFT check placeholder");
     }
 
     [ContextMenu("Add Random NFT")]

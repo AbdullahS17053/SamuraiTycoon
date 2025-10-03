@@ -22,13 +22,13 @@ public class IncomeModule : BuildingModule
 
     public override void OnBuildingTick(Building building, double deltaTime)
     {
-        if (!isActive || IsMaxLevel()) return;
+        if (!isActive || IsMaxLevel() || GameManager.Instance == null) return;
 
         timer += deltaTime;
         if (timer >= incomeInterval)
         {
             double income = CalculateIncome(building);
-            if (GameManager.Instance != null && GameManager.Instance.Economy != null)
+            if (GameManager.Instance.Economy != null)
             {
                 GameManager.Instance.Economy.AddGold(income);
             }
@@ -43,6 +43,12 @@ public class IncomeModule : BuildingModule
 
     public override void OnButtonClick(Building building)
     {
+        if (GameManager.Instance == null || GameManager.Instance.Economy == null)
+        {
+            Debug.LogError("Economy system not available!");
+            return;
+        }
+
         if (IsMaxLevel())
         {
             Debug.Log($"🎯 {moduleName} is already at maximum level!");
@@ -51,8 +57,7 @@ public class IncomeModule : BuildingModule
 
         double cost = GetCurrentCost(runtimeData.timesActivated);
 
-        if (GameManager.Instance != null && GameManager.Instance.Economy != null &&
-            GameManager.Instance.Economy.SpendGold(cost))
+        if (GameManager.Instance.Economy.SpendGold(cost))
         {
             runtimeData.timesActivated++;
             runtimeData.level++;

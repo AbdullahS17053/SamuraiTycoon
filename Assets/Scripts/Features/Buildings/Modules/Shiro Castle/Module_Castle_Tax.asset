@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc49ea7f5944e9845a7e71db4c49fee9, type: 3}
+  m_Name: Module_Castle_Tax
+  m_EditorClassIdentifier: 
+  moduleName: Tax Collection
+  description: Collect taxes from your domain for massive income
+  icon: {fileID: 0}
+  isActive: 1
+  showInUI: 1
+  buttonText: Collect Taxes
+  buttonColor: {r: 1, g: 1, b: 1, a: 1}
+  maxLevel: 100
+  showMaxLevelWarning: 1
+  activationCost: 1000
+  costMultiplier: 1.7
+  baseIncomeBonus: 10
+  incomeMultiplier: 1.25
+  incomeInterval: 1
+  effectDescription: Massive gold income through territory taxes

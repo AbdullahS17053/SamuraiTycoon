@@ -83,6 +83,11 @@ public class PrestigeManager : MonoBehaviour
         Debug.Log("🔄 PrestigeManager initialized");
     }
 
+    public void Initialize(GameData data, EconomyManager economy)
+    {
+        Debug.Log("✅ PrestigeManager initialized");
+    }
+
     void SetupUI()
     {
         if (prestigeButton != null)
@@ -240,7 +245,7 @@ public class PrestigeManager : MonoBehaviour
         if (_troopManager != null)
         {
             // This would need to be implemented in TroopManager
-            _troopManager.ResetTroops();
+            _troopManager.ResetAllTroops();
         }
 
         // Reset session-specific data
@@ -261,11 +266,11 @@ public class PrestigeManager : MonoBehaviour
         // Refresh troop manager
         if (_troopManager != null)
         {
-            _troopManager.InitializeTroops();
+            _troopManager.ReinitializeTroops();
         }
 
         // Refresh UI
-        var uiManager = FindObjectOfType<UIManager>();
+        var uiManager = GameManager.Instance.UI;
         if (uiManager != null)
         {
             uiManager.Initialize(_data, _economy, _buildingManager);
@@ -445,6 +450,36 @@ public class PrestigeManager : MonoBehaviour
         Debug.Log($"🎉 PRESTIGE COMPLETE! Gained {honorGained} Honor!");
     }
 
+    // Add this method to fix the error
+    public void ResetTroops()
+    {
+        TroopManager troopManager = FindObjectOfType<TroopManager>();
+        if (troopManager != null)
+        {
+            // Call public methods instead of inaccessible ones
+            troopManager.ResetAllTroops();
+        }
+    }
+
+    // Add this method to fix the UI manager error
+    public void RefreshUI()
+    {
+        // Get UIManager from GameManager instead of using FindObjectOfType
+        if (GameManager.Instance != null && GameManager.Instance.UI != null)
+        {
+            // UIManager will handle its own refresh
+        }
+    }
+
+    // Add public method for troop initialization
+    public void InitializeTroopsAfterPrestige()
+    {
+        TroopManager troopManager = FindObjectOfType<TroopManager>();
+        if (troopManager != null)
+        {
+            troopManager.ReinitializeTroops();
+        }
+    }
     void Update()
     {
         // Update UI every second

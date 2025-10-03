@@ -1,242 +1,166 @@
+﻿using System.Collections.Generic;
 using UnityEngine;
-using System.Collections.Generic;
 
 public class TrainingBuilding : MonoBehaviour
 {
-    [Header("Training Configuration")]
-    public string buildingId;
+    [Header("Training Building Configuration")]
+    public string buildingId = "training_ground";
+    public string displayName = "Training Grounds";
     public int trainingSlots = 3;
-    public float trainingTime = 10f;
-    public Transform[] trainingPositions;
-    public Transform exitPoint;
-    public Transform defensivePosition; // Where troops stand after training
+    public int queueLimit = 10;
 
-    [Header("Visual Effects")]
-    public ParticleSystem trainingEffect;
-    public AudioClip trainingSound;
-    public Light trainingLight;
+    [Header("Training Configuration")]
+    public float baseTrainingTime = 30f;
+    public double trainingCost = 100f;
 
     private List<TroopUnit> _trainingTroops = new List<TroopUnit>();
-    private List<float> _trainingProgress = new List<float>();
-    private Queue<TroopUnit> _waitingQueue = new Queue<TroopUnit>();
-    private bool[] _slotOccupied;
+    private Queue<TroopUnit> _trainingQueue = new Queue<TroopUnit>();
+    private float[] _trainingProgress;
+    private bool _isInitialized = false;
 
     void Start()
     {
-        _slotOccupied = new bool[trainingSlots];
-
-        // Auto-find positions if not assigned
-        if (trainingPositions == null || trainingPositions.Length == 0)
-        {
-            FindTrainingPositions();
-        }
+        Initialize();
     }
 
-    void FindTrainingPositions()
+    void Initialize()
     {
-        List<Transform> positions = new List<Transform>();
-
-        // Look for child objects named "TrainingPosition"
-        foreach (Transform child in transform)
-        {
-            if (child.name.Contains("TrainingPosition") || child.name.Contains("TrainPos"))
-            {
-                positions.Add(child);
-            }
-        }
-
-        trainingPositions = positions.ToArray();
-
-        // If still no positions, create them automatically
-        if (trainingPositions.Length == 0)
-        {
-            CreateDefaultPositions();
-        }
-    }
-
-    void CreateDefaultPositions()
-    {
-        trainingPositions = new Transform[trainingSlots];
-        for (int i = 0; i < trainingSlots; i++)
-        {
-            GameObject pos = new GameObject($"TrainingPosition_{i}");
-            pos.transform.SetParent(transform);
-            pos.transform.localPosition = new Vector3((i - trainingSlots / 2f) * 2f, 0, 0);
-            trainingPositions[i] = pos.transform;
-        }
-    }
-
-    public bool CanAcceptTroop()
-    {
-        return _trainingTroops.Count < trainingSlots || _waitingQueue.Count < 5; // Max queue size
-    }
-
-    public void SendTroopForTraining(TroopUnit troop)
-    {
-        if (_trainingTroops.Count < trainingSlots)
-        {
-            StartTraining(troop, _trainingTroops.Count);
-        }
-        else
-        {
-            _waitingQueue.Enqueue(troop);
-            troop.SetState(TroopUnit.TroopState.Queued);
-            troop.SetTargetPosition(GetQueuePosition(_waitingQueue.Count));
-        }
-    }
-
-    void StartTraining(TroopUnit troop, int slotIndex)
-    {
-        _trainingTroops.Add(troop);
-        _trainingProgress.Add(0f);
-        _slotOccupied[slotIndex] = true;
-
-        // Move troop to training position
-        troop.SetState(TroopUnit.TroopState.Training);
-        troop.SetTargetPosition(trainingPositions[slotIndex].position);
-
-        // Start training visual effects
-        if (trainingEffect != null)
-            trainingEffect.Play();
-
-        if (trainingLight != null)
-            trainingLight.enabled = true;
-
-        Debug.Log($"?? {troop.troopName} started training at {buildingId}");
+        _trainingProgress = new float[trainingSlots];
+        _isInitialized = true;
+        Debug.Log($"🏯 TrainingBuilding initialized: {displayName} with {trainingSlots} slots");
     }
 
     void Update()
     {
-        // Update training progress
+        if (!_isInitialized) return;
+
+        UpdateTrainingProgress();
+        ProcessTrainingQueue();
+    }
+
+    public bool AddToTraining(TroopUnit troop)
+    {
+        if (!_isInitialized || troop == null) return false;
+
+        // Check if there's an available slot
+        if (_trainingTroops.Count < trainingSlots)
+        {
+            StartTrainingTroop(troop, _trainingTroops.Count);
+            return true;
+        }
+        else if (_trainingQueue.Count < queueLimit)
+        {
+            _trainingQueue.Enqueue(troop);
+            troop.SetState(TroopUnit.TroopState.Idle); // Use the enum from TroopUnit
+            Debug.Log($"📋 {troop.troopName} added to training queue");
+            return true;
+        }
+
+        Debug.Log($"❌ Training queue full for {displayName}");
+        return false;
+    }
+
+    private void StartTrainingTroop(TroopUnit troop, int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= trainingSlots) return;
+
+        _trainingTroops.Add(troop);
+        _trainingProgress[slotIndex] = 0f;
+
+        // Use the TroopUnit's built-in training system
+        troop.StartTraining();
+
+        Debug.Log($"🎯 Started training {troop.troopName} in slot {slotIndex}");
+    }
+
+    private void UpdateTrainingProgress()
+    {
         for (int i = _trainingTroops.Count - 1; i >= 0; i--)
         {
-            if (_trainingTroops[i] == null)
+            var troop = _trainingTroops[i];
+            if (troop == null)
             {
                 _trainingTroops.RemoveAt(i);
-                _trainingProgress.RemoveAt(i);
                 continue;
             }
 
-            // Check if troop reached training position
-            if (Vector3.Distance(_trainingTroops[i].transform.position, trainingPositions[i].position) < 1f)
+            // Check if troop is still training using its internal state
+            if (!troop.IsTraining())
             {
-                _trainingProgress[i] += Time.deltaTime;
-
-                // Update troop training progress
-                _trainingTroops[i].UpdateTrainingProgress(_trainingProgress[i] / trainingTime);
-
-                // Training complete
-                if (_trainingProgress[i] >= trainingTime)
-                {
-                    CompleteTraining(_trainingTroops[i], i);
-                }
+                CompleteTraining(troop, i);
             }
         }
-
-        // Process waiting queue
-        if (_waitingQueue.Count > 0 && _trainingTroops.Count < trainingSlots)
-        {
-            TroopUnit nextTroop = _waitingQueue.Dequeue();
-            StartTraining(nextTroop, GetAvailableSlot());
-        }
     }
 
-    void CompleteTraining(TroopUnit troop, int slotIndex)
+    private void CompleteTraining(TroopUnit troop, int slotIndex)
     {
-        // Training complete effects
-        if (trainingEffect != null)
-            trainingEffect.Stop();
+        if (troop != null)
+        {
+            Debug.Log($"✅ Training completed for {troop.troopName}");
 
-        // Level up the troop
-        troop.CompleteTraining();
+            // The troop already handles its own completion logic
+            // Just remove it from our tracking
+        }
 
-        // Move troop to exit, then to defensive position
-        troop.SetState(TroopUnit.TroopState.MovingToPosition);
-        troop.SetTargetPosition(exitPoint.position);
-
-        // Remove from training lists
         _trainingTroops.RemoveAt(slotIndex);
-        _trainingProgress.RemoveAt(slotIndex);
-        _slotOccupied[slotIndex] = false;
-
-        Debug.Log($"??? {troop.troopName} completed training! Now level {troop.GetLevel()}");
-
-        // Start coroutine to send to defensive position
-        StartCoroutine(SendToDefensivePosition(troop));
+        _trainingProgress[slotIndex] = 0f;
     }
 
-    System.Collections.IEnumerator SendToDefensivePosition(TroopUnit troop)
+    private void ProcessTrainingQueue()
     {
-        // Wait for troop to reach exit point
-        yield return new WaitUntil(() => Vector3.Distance(troop.transform.position, exitPoint.position) < 1f);
-
-        // Send to defensive position
-        troop.SetState(TroopUnit.TroopState.Guarding);
-        troop.SetTargetPosition(defensivePosition.position);
-    }
-
-    int GetAvailableSlot()
-    {
-        for (int i = 0; i < trainingSlots; i++)
+        while (_trainingQueue.Count > 0 && _trainingTroops.Count < trainingSlots)
         {
-            if (!_slotOccupied[i]) return i;
+            TroopUnit nextTroop = _trainingQueue.Dequeue();
+            if (nextTroop != null)
+            {
+                StartTrainingTroop(nextTroop, _trainingTroops.Count);
+            }
         }
-        return 0;
     }
 
-    Vector3 GetQueuePosition(int queueIndex)
-    {
-        Vector3 basePosition = transform.position + transform.forward * 3f;
-        return basePosition + transform.right * (queueIndex * 2f);
-    }
-
-    public int GetQueueCount()
-    {
-        return _waitingQueue.Count;
-    }
-
+    // Public access methods
     public int GetTrainingCount()
     {
         return _trainingTroops.Count;
     }
 
+    public int GetQueueCount()
+    {
+        return _trainingQueue.Count;
+    }
+
     public float GetTrainingProgress(int slotIndex)
     {
-        if (slotIndex < _trainingProgress.Count)
-            return _trainingProgress[slotIndex] / trainingTime;
+        if (slotIndex >= 0 && slotIndex < trainingSlots && slotIndex < _trainingTroops.Count)
+        {
+            var troop = _trainingTroops[slotIndex];
+            if (troop != null && troop.IsTraining())
+            {
+                // You would need to expose progress from TroopUnit or calculate it here
+                return 0.5f; // Placeholder
+            }
+        }
         return 0f;
     }
 
-    void OnDrawGizmos()
+    public bool CanAcceptTraining()
     {
-        // Draw training positions
-        if (trainingPositions != null)
+        return _trainingTroops.Count < trainingSlots || _trainingQueue.Count < queueLimit;
+    }
+
+    [ContextMenu("Debug Training Info")]
+    public void DebugTrainingInfo()
+    {
+        Debug.Log($"=== {displayName} Training Info ===");
+        Debug.Log($"Training: {_trainingTroops.Count}/{trainingSlots}");
+        Debug.Log($"Queue: {_trainingQueue.Count}/{queueLimit}");
+
+        for (int i = 0; i < _trainingTroops.Count; i++)
         {
-            Gizmos.color = Color.yellow;
-            foreach (var pos in trainingPositions)
+            if (_trainingTroops[i] != null)
             {
-                if (pos != null)
-                {
-                    Gizmos.DrawWireSphere(pos.position, 0.5f);
-                    Gizmos.DrawIcon(pos.position, "Training.png", true);
-                }
+                Debug.Log($"Slot {i}: {_trainingTroops[i].troopName} (Lvl {_trainingTroops[i].GetLevel()})");
             }
-        }
-
-        // Draw exit point
-        if (exitPoint != null)
-        {
-            Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(exitPoint.position, 0.3f);
-            Gizmos.DrawIcon(exitPoint.position, "Exit.png", true);
-        }
-
-        // Draw defensive position
-        if (defensivePosition != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(defensivePosition.position, 0.5f);
-            Gizmos.DrawIcon(defensivePosition.position, "Guard.png", true);
         }
     }
 }

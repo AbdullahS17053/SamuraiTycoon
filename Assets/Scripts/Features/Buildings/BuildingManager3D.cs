@@ -30,6 +30,7 @@ public class BuildingManager3D : MonoBehaviour
     private string _currentSelectedBuilding = "";
     private Vector3 _originalCameraPosition;
     private Quaternion _originalCameraRotation;
+    private bool _isInitialized = false;
 
     // Events
     public System.Action<string> OnBuildingUpgraded;
@@ -42,6 +43,10 @@ public class BuildingManager3D : MonoBehaviour
         {
             Instance = this;
             Debug.Log("✅ BuildingManager3D singleton created");
+        }
+        else
+        {
+            Destroy(gameObject);
         }
 
         // Store original camera position
@@ -77,11 +82,14 @@ public class BuildingManager3D : MonoBehaviour
             }
         }
 
+        _isInitialized = true;
         Debug.Log($"✅ BuildingManager3D initialized with {BuildingInstances.Count} buildings");
     }
 
     void Update()
     {
+        if (!_isInitialized) return;
+
         _tickTimer += Time.deltaTime;
         if (_tickTimer >= TICK_INTERVAL)
         {
@@ -123,6 +131,8 @@ public class BuildingManager3D : MonoBehaviour
 
     public void ShowBuildingPanel(string buildingId)
     {
+        if (!_isInitialized) return;
+
         _currentSelectedBuilding = buildingId;
 
         // Hide all building highlights
@@ -219,7 +229,6 @@ public class BuildingManager3D : MonoBehaviour
 
             if (buildingUIComponent != null)
             {
-                // This is the fixed Initialize method call
                 buildingUIComponent.Initialize(building, config, data, _economy);
                 Debug.Log($"✅ BuildingPanelUI3D initialized successfully");
             }
@@ -240,6 +249,8 @@ public class BuildingManager3D : MonoBehaviour
 
     public void UpgradeBuilding(string buildingId)
     {
+        if (!_isInitialized || _economy == null) return;
+
         var buildingData = _data.Buildings.Find(b => b.ID == buildingId);
         var buildingInstance = GetBuildingInstance(buildingId);
 
@@ -262,7 +273,6 @@ public class BuildingManager3D : MonoBehaviour
             // Notify building instance about upgrade
             buildingInstance.OnUpgrade(oldLevel, buildingData.Level);
 
-
             Debug.Log($"⬆️ {buildingId} upgraded: Level {oldLevel} → {buildingData.Level}");
             OnBuildingUpgraded?.Invoke(buildingId);
 
@@ -276,6 +286,8 @@ public class BuildingManager3D : MonoBehaviour
 
     public void ActivateModule(string buildingId, string moduleName)
     {
+        if (!_isInitialized) return;
+
         var building = GetBuildingInstance(buildingId);
         if (building != null)
         {
@@ -305,7 +317,7 @@ public class BuildingManager3D : MonoBehaviour
 
     public BuildingData GetData(string buildingId)
     {
-        return _data.Buildings.Find(b => b.ID == buildingId);
+        return _data?.Buildings?.Find(b => b.ID == buildingId);
     }
 
     public Building GetBuildingInstance(string buildingId)
@@ -340,6 +352,8 @@ public class BuildingManager3D : MonoBehaviour
 
     public double GetTotalIncomePerSecond()
     {
+        if (!_isInitialized) return 0;
+
         double totalIncome = 0;
         foreach (var buildingData in _data.Buildings)
         {
@@ -422,6 +436,8 @@ public class BuildingManager3D : MonoBehaviour
     {
         Debug.Log("=== BUILDING MANAGER DEBUG ===");
         Debug.Log($"All Buildings Count: {AllBuildings.Count}");
+        Debug.Log($"Initialized: {_isInitialized}");
+        Debug.Log($"Data: {_data != null}");
 
         foreach (var config in AllBuildings)
         {
@@ -450,6 +466,7 @@ public class BuildingManager3D : MonoBehaviour
         Debug.Log($"Current Selected: {_currentSelectedBuilding}");
         Debug.Log("=== DEBUG COMPLETE ===");
     }
+
     // Add this method to BuildingManager3D class
     public void RefreshUI()
     {

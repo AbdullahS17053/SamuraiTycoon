@@ -24,9 +24,9 @@ public abstract class BuildingModule : ScriptableObject
     public float costMultiplier = 1.2f;
 
     // Events for module lifecycle
-    public event Action<string> OnModuleStarted;    // BuildingID
-    public event Action<string> OnModuleCompleted; // BuildingID
-    public event Action<string> OnModuleProgress;  // BuildingID
+    public event Action<string> OnModuleStarted;
+    public event Action<string> OnModuleCompleted;
+    public event Action<string> OnModuleProgress;
 
     // Runtime data for this module instance
     [System.NonSerialized]
@@ -54,6 +54,7 @@ public abstract class BuildingModule : ScriptableObject
     // Can this module be activated?
     public virtual bool CanActivate(Building building, double currentGold)
     {
+        if (GameManager.Instance == null || GameManager.Instance.Economy == null) return false;
         return !IsMaxLevel() && currentGold >= GetCurrentCost(GetActivationCount(building));
     }
 

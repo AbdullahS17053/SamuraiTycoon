@@ -17,27 +17,29 @@ public class EconomyManager
     public event Action<int> OnPeasantsChanged;
 
     private GameData _data;
-    private BuildingManager3D _buildingManager; // ← CHANGED TO BuildingManager3D
+    private BuildingManager3D _buildingManager;
     private float _tickTimer;
     private const float TICK_INTERVAL = 1.0f;
+    private bool _isInitialized = false;
 
     public void Initialize(GameData data)
     {
         _data = data;
+        _isInitialized = true;
         UpdateDebugView();
         Debug.Log("✅ EconomyManager initialized with starting gold: " + _data.Gold);
     }
 
-    // CHANGED PARAMETER TYPE to BuildingManager3D
     public void SetBuildingManager(BuildingManager3D buildingManager)
     {
         _buildingManager = buildingManager;
         Debug.Log("🔗 BuildingManager3D linked to EconomyManager");
     }
 
-    // Call this in Update() from a MonoBehaviour wrapper
     public void Tick(float deltaTime)
     {
+        if (!_isInitialized || _buildingManager == null) return;
+
         _tickTimer += deltaTime;
         if (_tickTimer >= TICK_INTERVAL)
         {
@@ -50,7 +52,6 @@ public class EconomyManager
     {
         if (_buildingManager == null)
         {
-            Debug.LogWarning("⚠️ BuildingManager3D not set - cannot calculate income");
             return;
         }
 
@@ -59,17 +60,12 @@ public class EconomyManager
         if (income > 0)
         {
             AddGold(income);
-            Debug.Log($"💵 Passive income: +{income} gold");
         }
     }
 
     public void AddGold(double amount)
     {
-        if (amount <= 0)
-        {
-            Debug.LogWarning("⚠️ Attempted to add negative or zero gold: " + amount);
-            return;
-        }
+        if (!_isInitialized || amount <= 0) return;
 
         double oldGold = _data.Gold;
         _data.Gold += amount;
@@ -81,11 +77,7 @@ public class EconomyManager
 
     public bool SpendGold(double amount)
     {
-        if (amount <= 0)
-        {
-            Debug.LogError("❌ Attempted to spend negative gold: " + amount);
-            return false;
-        }
+        if (!_isInitialized || amount <= 0) return false;
 
         if (_data.Gold >= amount)
         {
@@ -104,11 +96,7 @@ public class EconomyManager
 
     public void AddHonor(double amount)
     {
-        if (amount <= 0)
-        {
-            Debug.LogWarning("⚠️ Attempted to add negative honor: " + amount);
-            return;
-        }
+        if (!_isInitialized || amount <= 0) return;
 
         double oldHonor = _data.Honor;
         _data.Honor += amount;
@@ -120,9 +108,22 @@ public class EconomyManager
 
     private void UpdateDebugView()
     {
+        if (!_isInitialized) return;
+
         Gold = _data.Gold;
         Honor = _data.Honor;
         Samurai = _data.Samurai;
         Peasants = _data.Peasants;
+    }
+
+    // Helper methods for other systems
+    public bool CanAfford(double amount)
+    {
+        return _isInitialized && _data.Gold >= amount;
+    }
+
+    public double GetCurrentGold()
+    {
+        return _isInitialized ? _data.Gold : 0;
     }
 }

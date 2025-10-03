@@ -44,18 +44,21 @@ public class GameManager : MonoBehaviour
         Save.Initialize();
         Debug.Log("✅ SaveManager initialized");
 
-        // 2. Calculate offline earnings
-        double offlineEarnings = Save.CalculateOfflineEarnings(Buildings);
-        Debug.Log($"💰 Offline earnings: {offlineEarnings}");
-
-        // 3. Initialize Core Systems
+        // 2. Initialize Core Systems
         Economy.Initialize(Save.Data);
         Debug.Log("✅ EconomyManager initialized");
 
         Buildings.Initialize(Save.Data, Economy);
         Debug.Log("✅ BuildingManager3D initialized");
 
-        // 4. Initialize New Systems
+        // 3. Link Economy with Building Manager
+        Economy.SetBuildingManager(Buildings);
+
+        // 4. Calculate offline earnings AFTER systems are initialized
+        double offlineEarnings = Save.CalculateOfflineEarnings(Buildings);
+        Debug.Log($"💰 Offline earnings: {offlineEarnings}");
+
+        // 5. Initialize New Systems
         if (Zone != null)
         {
             Zone.Initialize(Save.Data, Economy, Buildings);
@@ -64,34 +67,35 @@ public class GameManager : MonoBehaviour
 
         if (Troops != null && enableTroopSystem)
         {
-            // Troops will auto-initialize in Start()
-            Debug.Log("✅ TroopManager enabled");
+            Troops.Initialize(Save.Data, Economy);
+            Debug.Log("✅ TroopManager initialized");
         }
 
         if (Prestige != null)
         {
-            // Prestige auto-initializes in Start()
+            Prestige.Initialize(Save.Data, Economy);
             Debug.Log("✅ PrestigeManager initialized");
         }
 
-        // 5. Initialize Theme
+        // 6. Initialize Theme
         if (Theme != null && enableJapaneseTheme)
         {
-            Theme.ApplyJapaneseThemeToAll();
-            Debug.Log("🎌 Japanese theme applied");
+            Theme.Initialize(Save.Data);
+            Debug.Log("🎌 ThemeManager initialized");
         }
 
-        // 6. Initialize Web3 (Optional)
+        // 7. Initialize Web3 (Optional)
         if (Web3 != null && enableWeb3Features)
         {
-            Debug.Log("✅ Web3Manager initialized (Placeholder)");
+            Web3.Initialize(Save.Data);
+            Debug.Log("✅ Web3Manager initialized");
         }
 
-        // 7. Initialize UI LAST
+        // 8. Initialize UI LAST
         UI.Initialize(Save.Data, Economy, Buildings);
         Debug.Log("✅ UIManager initialized");
 
-        // 8. Add offline earnings
+        // 9. Add offline earnings
         if (offlineEarnings > 0 && !Save.resetSaveOnStart)
         {
             Economy.AddGold(offlineEarnings);
@@ -105,6 +109,12 @@ public class GameManager : MonoBehaviour
     {
         // Tick economy
         Economy.Tick(Time.deltaTime);
+
+        // Tick troops if enabled
+        if (Troops != null && enableTroopSystem)
+        {
+            Troops.Tick(Time.deltaTime);
+        }
 
         // Auto-save every 30 seconds
         if (Time.time % 30f < Time.deltaTime)

@@ -44,6 +44,10 @@ public class TroopUnit : MonoBehaviour
     private TroopManager _manager;
     private AudioSource _audioSource;
 
+    // Add these fields to the TroopUnit class
+    private TroopState _currentState = TroopState.Idle;
+    private float _trainingProgress = 0f;
+
     public enum TroopType
     {
         Samurai,
@@ -61,6 +65,15 @@ public class TroopUnit : MonoBehaviour
         Rare,
         Epic,
         Legendary
+    }
+    // Add this enum to the TroopUnit class
+    public enum TroopState
+    {
+        Idle,
+        Training,
+        Combat,
+        Moving,
+        Patrolling
     }
 
     void Start()
@@ -113,6 +126,8 @@ public class TroopUnit : MonoBehaviour
         UpdateVisuals();
     }
 
+
+
     void ApplyRarityBonuses()
     {
         switch (rarity)
@@ -142,51 +157,41 @@ public class TroopUnit : MonoBehaviour
         }
     }
 
-    public void StartTraining()
+    // Add these methods to the TroopUnit class
+    public void SetState(TroopState newState)
     {
-        if (!_isTraining)
+        TroopState previousState = _currentState;
+        _currentState = newState;
+
+        // Handle state transitions
+        OnStateChanged(previousState, newState);
+    }
+
+    public TroopState GetCurrentState()
+    {
+        return _currentState;
+    }
+
+    public void UpdateTrainingProgress(float progress)
+    {
+        _trainingProgress = Mathf.Clamp01(progress);
+
+        // Visual feedback for training progress
+        if (troopRenderer != null)
         {
-            _isTraining = true;
-            StartCoroutine(TrainingCoroutine());
+            Color trainingColor = Color.Lerp(Color.gray, GetRarityColor(), _trainingProgress);
+            troopRenderer.material.color = trainingColor;
         }
     }
 
-    IEnumerator TrainingCoroutine()
+    public void CompleteTraining()
     {
-        float timer = 0f;
-
-        // Training animation
-        if (animator != null)
-            animator.SetBool("IsTraining", true);
-
-        // Visual training progress
-        Material mat = troopRenderer.material;
-        Color originalColor = mat.color;
-
-        while (timer < trainingTime)
-        {
-            timer += Time.deltaTime;
-            float progress = timer / trainingTime;
-
-            // Visual progress indicator
-            mat.color = Color.Lerp(Color.gray, originalColor, progress);
-
-            // Pulse effect when nearly done
-            if (progress > 0.8f)
-            {
-                float pulse = Mathf.PingPong(Time.time * 4f, 0.3f) + 0.7f;
-                transform.localScale = Vector3.one * pulse;
-            }
-
-            yield return null;
-        }
-
-        // Training complete
         _isTraining = false;
         _level++;
+        _trainingProgress = 1f;
 
         // Level up bonuses
-        baseIncomePerSecond *= 1.2f; // 20% increase per level
+        baseIncomePerSecond *= 1.2f;
         moveSpeed *= 1.05f;
 
         // Reset visuals
@@ -195,6 +200,7 @@ public class TroopUnit : MonoBehaviour
             animator.SetBool("IsTraining", false);
 
         UpdateVisuals();
+        SetState(TroopState.Idle);
 
         // Generate income and notify manager
         if (_manager != null)
@@ -203,6 +209,63 @@ public class TroopUnit : MonoBehaviour
         }
 
         Debug.Log($"🎖️ {troopName} trained to level {_level}! Income: {GetCurrentIncome()}/s");
+    }
+
+    private void OnStateChanged(TroopState fromState, TroopState toState)
+    {
+        Debug.Log($"🔄 {troopName} state changed: {fromState} -> {toState}");
+
+        // Handle animation states
+        if (animator != null)
+        {
+            animator.SetBool("IsTraining", toState == TroopState.Training);
+            animator.SetBool("InCombat", toState == TroopState.Combat);
+            animator.SetBool("IsMoving", toState == TroopState.Moving);
+        }
+
+        // Handle navigation
+        if (navAgent != null)
+        {
+            navAgent.isStopped = (toState == TroopState.Training || toState == TroopState.Idle);
+        }
+    }
+
+    // Modify the existing StartTraining method to use the state system
+    public void StartTraining()
+    {
+        if (!_isTraining && _currentState != TroopState.Training)
+        {
+            _isTraining = true;
+            SetState(TroopState.Training);
+            StartCoroutine(TrainingCoroutine());
+        }
+    }
+
+    // Modify the TrainingCoroutine to use the new progress system
+    IEnumerator TrainingCoroutine()
+    {
+        float timer = 0f;
+        _trainingProgress = 0f;
+
+        while (timer < trainingTime)
+        {
+            timer += Time.deltaTime;
+            _trainingProgress = timer / trainingTime;
+
+            UpdateTrainingProgress(_trainingProgress);
+
+            // Pulse effect when nearly done
+            if (_trainingProgress > 0.8f)
+            {
+                float pulse = Mathf.PingPong(Time.time * 4f, 0.3f) + 0.7f;
+                transform.localScale = Vector3.one * pulse;
+            }
+
+            yield return null;
+        }
+
+        // Use the new CompleteTraining method
+        CompleteTraining();
     }
 
     void HandleCombat()

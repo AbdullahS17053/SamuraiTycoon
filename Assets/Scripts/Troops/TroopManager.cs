@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class TroopManager : MonoBehaviour
@@ -31,6 +30,7 @@ public class TroopManager : MonoBehaviour
     private ZoneManager _zoneManager;
     private float _autoTrainTimer = 0f;
     private int _troopsTrainedThisSession = 0;
+    private bool _isInitialized = false;
 
     [System.Serializable]
     public class TroopTypeConfig
@@ -55,28 +55,66 @@ public class TroopManager : MonoBehaviour
         }
     }
 
-    void Start()
+    public void Initialize(GameData data, EconomyManager economy)
     {
-        _economy = FindObjectOfType<GameManager>()?.Economy;
+        _economy = economy;
         _zoneManager = FindObjectOfType<ZoneManager>();
 
         // Load saved troops or create initial troops
         InitializeTroops();
 
+        _isInitialized = true;
         Debug.Log($"🎖️ TroopManager initialized with {_troops.Count} troops");
     }
 
-    void InitializeTroops()
+    public void ResetAllTroops()
     {
-        // For now, create 3 initial troops
+        foreach (var troop in _troops)
+        {
+            if (troop != null)
+            {
+                Destroy(troop.gameObject);
+            }
+        }
+        _troops.Clear();
+        _troopsTrainedThisSession = 0;
+
+        // Reinitialize troops
+        InitializeTroops();
+        Debug.Log("🔄 All troops reset and reinitialized");
+    }
+
+    public void ReinitializeTroops()
+    {
+        InitializeTroops();
+    }
+
+    // Make InitializeTroops protected instead of private
+    protected void InitializeTroops()
+    {
+        // Clear existing troops first
+        foreach (var troop in _troops)
+        {
+            if (troop != null)
+            {
+                Destroy(troop.gameObject);
+            }
+        }
+        _troops.Clear();
+
+        // Create initial troops
         for (int i = 0; i < 3; i++)
         {
             CreateNewTroop(GetRandomTroopType(), GetRandomRarity());
         }
+
+        Debug.Log($"🎖️ Troops reinitialized with {_troops.Count} troops");
     }
 
     public void CreateNewTroop(TroopUnit.TroopType type, TroopUnit.TroopRarity rarity)
     {
+        if (!_isInitialized) return;
+
         if (GetTotalTroops() >= GetMaxTroops())
         {
             Debug.Log("❌ Maximum troop capacity reached!");
@@ -146,6 +184,8 @@ public class TroopManager : MonoBehaviour
 
     public void OnTroopTrained(TroopUnit troop)
     {
+        if (!_isInitialized) return;
+
         // Add income from trained troop
         double income = troop.GetCurrentIncome();
         _totalTroopIncome += income;
@@ -158,9 +198,11 @@ public class TroopManager : MonoBehaviour
 
     public void PurchaseNewTroop()
     {
+        if (!_isInitialized || _economy == null) return;
+
         double cost = GetNextTroopCost();
 
-        if (_economy != null && _economy.SpendGold(cost))
+        if (_economy.SpendGold(cost))
         {
             CreateNewTroop(GetRandomTroopType(), GetRandomRarity());
             Debug.Log($"🎖️ Purchased new troop for {cost} gold");
@@ -217,8 +259,10 @@ public class TroopManager : MonoBehaviour
         Debug.Log($"💰 +{amount} from troop at {position}");
     }
 
-    void Update()
+    public void Tick(float deltaTime)
     {
+        if (!_isInitialized) return;
+
         // Handle troop movement input
         if (Input.GetMouseButtonDown(1) && _selectedTroop != null) // Right click
         {
@@ -232,7 +276,7 @@ public class TroopManager : MonoBehaviour
         }
 
         // Auto-train troops periodically
-        _autoTrainTimer += Time.deltaTime;
+        _autoTrainTimer += deltaTime;
         if (_autoTrainTimer >= autoTrainInterval)
         {
             AutoTrainIdleTroops();
@@ -263,6 +307,8 @@ public class TroopManager : MonoBehaviour
 
     void GeneratePassiveIncome()
     {
+        if (!_isInitialized || _economy == null) return;
+
         double passiveIncome = 0;
 
         foreach (var troop in _troops)
@@ -279,11 +325,12 @@ public class TroopManager : MonoBehaviour
             }
         }
 
-        if (passiveIncome > 0 && _economy != null)
+        if (passiveIncome > 0)
         {
             _economy.AddGold(passiveIncome);
         }
     }
+
 
     // Helper methods
     TroopUnit.TroopType GetRandomTroopType()

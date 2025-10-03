@@ -181,6 +181,7 @@ public class ZoneManager : MonoBehaviour
         return zoneProgression.GetNextZone(currentZone.zoneId);
     }
 
+
     [ContextMenu("Debug Zone Info")]
     public void DebugZoneInfo()
     {
