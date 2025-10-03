@@ -4,112 +4,122 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [Header("Manager References - DRAG THIS OBJECT TO ALL FIELDS!")]
+    [Header("Core Managers")]
     public EconomyManager Economy;
     public BuildingManager3D Buildings;
     public UIManager UI;
     public SaveManager Save;
 
+    [Header("New Systems")]
+    public ZoneManager Zone;
+    public TroopManager Troops;
+    public PrestigeManager Prestige;
+    public ThemeManager Theme;
+    public Web3Manager Web3;
+
+    [Header("Game Settings")]
+    public bool enableWeb3Features = false;
+    public bool enableJapaneseTheme = true;
+    public bool enableTroopSystem = true;
+
     void Awake()
     {
-        Debug.Log("=== GAME MANAGER STARTING ===");
+        Debug.Log("=== SAMURAI TYCOON INITIALIZING ===");
 
-        // Singleton pattern - only one instance allowed
         if (Instance == null)
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            InitializeManagers();
-            Debug.Log("✅ GameManager initialized as singleton");
+            InitializeGame();
         }
         else
         {
-            Debug.Log("⚠️ Duplicate GameManager destroyed");
             Destroy(gameObject);
         }
     }
 
-    void InitializeManagers()
+    void InitializeGame()
     {
-        Debug.Log("🔄 Initializing managers...");
-
-        // Initialize SaveManager FIRST
+        // 1. Initialize Save System FIRST
         Save.Initialize();
         Debug.Log("✅ SaveManager initialized");
 
-        // Calculate offline earnings before economy starts
+        // 2. Calculate offline earnings
         double offlineEarnings = Save.CalculateOfflineEarnings(Buildings);
-        Debug.Log($"💰 Offline earnings calculated: {offlineEarnings}");
+        Debug.Log($"💰 Offline earnings: {offlineEarnings}");
 
-        // Initialize other managers
+        // 3. Initialize Core Systems
         Economy.Initialize(Save.Data);
         Debug.Log("✅ EconomyManager initialized");
 
         Buildings.Initialize(Save.Data, Economy);
         Debug.Log("✅ BuildingManager3D initialized");
 
-        // Link building manager to economy for income calculation
-        Economy.SetBuildingManager(Buildings);
-        Debug.Log("🔗 BuildingManager3D linked to EconomyManager");
+        // 4. Initialize New Systems
+        if (Zone != null)
+        {
+            Zone.Initialize(Save.Data, Economy, Buildings);
+            Debug.Log("✅ ZoneManager initialized");
+        }
 
+        if (Troops != null && enableTroopSystem)
+        {
+            // Troops will auto-initialize in Start()
+            Debug.Log("✅ TroopManager enabled");
+        }
+
+        if (Prestige != null)
+        {
+            // Prestige auto-initializes in Start()
+            Debug.Log("✅ PrestigeManager initialized");
+        }
+
+        // 5. Initialize Theme
+        if (Theme != null && enableJapaneseTheme)
+        {
+            Theme.ApplyJapaneseThemeToAll();
+            Debug.Log("🎌 Japanese theme applied");
+        }
+
+        // 6. Initialize Web3 (Optional)
+        if (Web3 != null && enableWeb3Features)
+        {
+            Debug.Log("✅ Web3Manager initialized (Placeholder)");
+        }
+
+        // 7. Initialize UI LAST
         UI.Initialize(Save.Data, Economy, Buildings);
         Debug.Log("✅ UIManager initialized");
 
-        // Add offline earnings to economy (unless this was a reset)
+        // 8. Add offline earnings
         if (offlineEarnings > 0 && !Save.resetSaveOnStart)
         {
             Economy.AddGold(offlineEarnings);
-            Debug.Log($"💸 Added offline earnings to player: {offlineEarnings}");
-        }
-        else if (Save.resetSaveOnStart)
-        {
-            Debug.Log("🔄 Reset mode - skipping offline earnings");
+            Debug.Log($"💸 Added offline earnings: {offlineEarnings}");
         }
 
-        Debug.Log("🎉 ALL MANAGERS INITIALIZED SUCCESSFULLY!");
+        Debug.Log("🎉 ALL SYSTEMS INITIALIZED!");
     }
 
     void Update()
     {
-        // Tick economy and building managers
+        // Tick economy
         Economy.Tick(Time.deltaTime);
+
+        // Auto-save every 30 seconds
+        if (Time.time % 30f < Time.deltaTime)
+        {
+            Save.SaveGame();
+        }
     }
 
     void OnApplicationPause(bool pauseStatus)
     {
-        if (pauseStatus)
-        {
-            Save.SaveGame();
-            Debug.Log("📱 Game paused - auto-saved");
-        }
+        if (pauseStatus) Save.SaveGame();
     }
 
     void OnApplicationQuit()
     {
         Save.SaveGame();
-        Debug.Log("👋 Game quit - auto-saved");
-    }
-
-    [ContextMenu("Reset Game Runtime")]
-    public void ResetGameRuntime()
-    {
-        Debug.Log("🔄 Resetting game runtime...");
-
-        Save.ResetGameData();
-
-        // Re-initialize all managers with fresh data
-        Economy.Initialize(Save.Data);
-        Buildings.Initialize(Save.Data, Economy);
-        UI.Initialize(Save.Data, Economy, Buildings);
-
-        Debug.Log("🎮 Game reset complete! All managers reinitialized.");
-    }
-
-    [ContextMenu("Force Reset Game")]
-    public void ForceResetGame()
-    {
-        Debug.Log("💥 FORCE RESETTING GAME...");
-        Save.ForceResetGameData();
-        ResetGameRuntime();
     }
 }
