@@ -50,7 +50,7 @@ public class UIManager
         if (peasantsText != null)
             peasantsText.text = _data.Peasants + " Peasants";
 
-        Debug.Log($"🔄 UI Updated: Gold={_data.Gold}, Honor={_data.Honor}");
+        //* Debug.Log($"🔄 UI Updated: Gold={_data.Gold}, Honor={_data.Honor}");
     }
 
     private string FormatNumber(double num)

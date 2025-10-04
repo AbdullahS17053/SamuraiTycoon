@@ -1,61 +1,17 @@
 ﻿using UnityEngine;
 using System.Collections;
-using TMPro;
-using UnityEngine.AI;
+using System.Collections.Generic;
 
 public class TroopUnit : MonoBehaviour
 {
-    [Header("Troop Configuration")]
-    public string troopId;
-    public string troopName;
-    public TroopType troopType = TroopType.Samurai;
-    public TroopRarity rarity = TroopRarity.Common;
-
-    [Header("Stats")]
-    public double baseIncomePerSecond = 1.0;
-    public float trainingTime = 5.0f;
-    public float moveSpeed = 3.5f;
-    public float attackRange = 2.0f;
-    public float attackDamage = 10f;
-    public float attackSpeed = 1.0f;
-
-    [Header("Visual Elements")]
-    public Animator animator;
-    public TextMeshPro levelText;
-    public GameObject selectionEffect;
-    public Renderer troopRenderer;
-    public GameObject rarityEffect;
-    public NavMeshAgent navAgent;
-
-    [Header("Combat")]
-    public GameObject attackProjectile;
-    public Transform attackPoint;
-    public AudioClip attackSound;
-
-    // Current state
-    private int _level = 1;
-    private bool _isTraining = false;
-    private bool _isSelected = false;
-    private bool _inCombat = false;
-    private TroopUnit _currentTarget;
-    private float _attackCooldown = 0f;
-
-    // References
-    private TroopManager _manager;
-    private AudioSource _audioSource;
-
-    // Add these fields to the TroopUnit class
-    private TroopState _currentState = TroopState.Idle;
-    private float _trainingProgress = 0f;
-
     public enum TroopType
     {
         Samurai,
-        Ashigaru,
         Archer,
-        Spearman,
         Cavalry,
-        Ninja
+        Ninja,
+        Spearman,
+        Ashigaru
     }
 
     public enum TroopRarity
@@ -66,50 +22,62 @@ public class TroopUnit : MonoBehaviour
         Epic,
         Legendary
     }
-    // Add this enum to the TroopUnit class
+
     public enum TroopState
     {
         Idle,
+        MovingToBuilding,
         Training,
-        Combat,
-        Moving,
-        Patrolling
+        MovingToCastle,
+        InCastle,
+        MovingToWar,
+        InBattle
     }
 
-    void Start()
+    [Header("Troop Identification")]
+    public string troopId;
+    public string troopName;
+    public TroopType troopType;
+    public TroopRarity rarity;
+
+    [Header("Troop Stats")]
+    public float currentPower = 10f;
+    public float basePower = 10f;
+    public float trainingPowerBonus = 0f;
+    public int trainingBuildingsCompleted = 0;
+
+    [Header("State Management")]
+    public TroopState currentState = TroopState.Idle;
+    public TrainingBuilding currentTrainingBuilding;
+    public int currentBuildingIndex = 0;
+
+    // Movement
+    [System.NonSerialized] public UnityEngine.AI.NavMeshAgent navAgent;
+    private TroopManager troopManager;
+
+    // Animation
+    public Animator animator;
+    private bool hasAnimator = false;
+
+    // Training animation
+    private Coroutine trainingAnimationCoroutine;
+    private Vector3 originalScale;
+
+    // Debug tracking
+    private string debugStatus = "Initialized";
+
+    void Awake()
     {
-        _manager = FindObjectOfType<TroopManager>();
-        _audioSource = GetComponent<AudioSource>();
-        if (_audioSource == null) _audioSource = gameObject.AddComponent<AudioSource>();
+        navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        animator = GetComponent<Animator>();
+        hasAnimator = animator != null;
 
-        if (navAgent != null)
-        {
-            navAgent.speed = moveSpeed;
-        }
+        originalScale = transform.localScale;
+        DisableVisualElements();
 
-        UpdateVisuals();
-        SetRandomPatrolPoint();
-    }
-
-    void Update()
-    {
-        if (_inCombat && _currentTarget != null)
+        if (!hasAnimator)
         {
-            HandleCombat();
-        }
-        else if (!_isTraining && navAgent != null && !navAgent.hasPath)
-        {
-            // Random patrol behavior when not in combat
-            if (Random.Range(0f, 1f) < 0.01f) // 1% chance each frame to get new destination
-            {
-                SetRandomPatrolPoint();
-            }
-        }
-
-        // Update attack cooldown
-        if (_attackCooldown > 0f)
-        {
-            _attackCooldown -= Time.deltaTime;
+            Debug.LogWarning($"⚠️ {gameObject.name}: No Animator component found. Animation states will not work.");
         }
     }
 
@@ -119,347 +87,467 @@ public class TroopUnit : MonoBehaviour
         troopName = name;
         troopType = type;
         rarity = troopRarity;
-        _manager = manager;
+        troopManager = manager;
 
-        // Apply rarity bonuses
-        ApplyRarityBonuses();
-        UpdateVisuals();
+        basePower = GetBasePowerByRarity();
+        currentPower = basePower;
+
+        debugStatus = "Initialized at barracks";
+        Debug.Log($"⚔️ {troopName} initialized with {currentPower} power");
+
+        // Set initial animation state
+        UpdateAnimationState();
     }
 
-
-
-    void ApplyRarityBonuses()
+    void DisableVisualElements()
     {
-        switch (rarity)
+
+        Collider collider = GetComponent<Collider>();
+        if (collider != null)
         {
-            case TroopRarity.Common:
-                baseIncomePerSecond *= 1.0;
+            collider.enabled = true;
+        }
+    }
+
+    void Update()
+    {
+        UpdateState();
+        UpdateAnimationState();
+    }
+
+    void UpdateState()
+    {
+        switch (currentState)
+        {
+            case TroopState.MovingToBuilding:
+                if (navAgent != null && !navAgent.pathPending && navAgent.remainingDistance <= navAgent.stoppingDistance)
+                {
+                    debugStatus = "Reached building, starting training";
+                    StartTraining();
+                }
                 break;
-            case TroopRarity.Uncommon:
-                baseIncomePerSecond *= 1.5;
-                moveSpeed *= 1.1f;
-                break;
-            case TroopRarity.Rare:
-                baseIncomePerSecond *= 2.0;
-                moveSpeed *= 1.2f;
-                trainingTime *= 0.9f;
-                break;
-            case TroopRarity.Epic:
-                baseIncomePerSecond *= 3.0;
-                moveSpeed *= 1.3f;
-                trainingTime *= 0.8f;
-                break;
-            case TroopRarity.Legendary:
-                baseIncomePerSecond *= 5.0;
-                moveSpeed *= 1.5f;
-                trainingTime *= 0.7f;
+
+            case TroopState.MovingToCastle:
+                if (navAgent != null && !navAgent.pathPending && navAgent.remainingDistance <= navAgent.stoppingDistance)
+                {
+                    debugStatus = "Reached castle, entering";
+                    EnterCastle();
+                }
                 break;
         }
     }
 
-    // Add these methods to the TroopUnit class
-    public void SetState(TroopState newState)
+    void UpdateAnimationState()
     {
-        TroopState previousState = _currentState;
-        _currentState = newState;
+        if (!hasAnimator) return;
 
-        // Handle state transitions
-        OnStateChanged(previousState, newState);
-    }
-
-    public TroopState GetCurrentState()
-    {
-        return _currentState;
-    }
-
-    public void UpdateTrainingProgress(float progress)
-    {
-        _trainingProgress = Mathf.Clamp01(progress);
-
-        // Visual feedback for training progress
-        if (troopRenderer != null)
+        try
         {
-            Color trainingColor = Color.Lerp(Color.gray, GetRarityColor(), _trainingProgress);
-            troopRenderer.material.color = trainingColor;
-        }
-    }
+            // Update walking animation based on movement
+            bool isMoving = currentState == TroopState.MovingToBuilding ||
+                           currentState == TroopState.MovingToCastle ||
+                           currentState == TroopState.MovingToWar;
 
-    public void CompleteTraining()
-    {
-        _isTraining = false;
-        _level++;
-        _trainingProgress = 1f;
+            animator.SetBool("Walking", isMoving);
 
-        // Level up bonuses
-        baseIncomePerSecond *= 1.2f;
-        moveSpeed *= 1.05f;
-
-        // Reset visuals
-        transform.localScale = Vector3.one;
-        if (animator != null)
-            animator.SetBool("IsTraining", false);
-
-        UpdateVisuals();
-        SetState(TroopState.Idle);
-
-        // Generate income and notify manager
-        if (_manager != null)
-        {
-            _manager.OnTroopTrained(this);
-        }
-
-        Debug.Log($"🎖️ {troopName} trained to level {_level}! Income: {GetCurrentIncome()}/s");
-    }
-
-    private void OnStateChanged(TroopState fromState, TroopState toState)
-    {
-        Debug.Log($"🔄 {troopName} state changed: {fromState} -> {toState}");
-
-        // Handle animation states
-        if (animator != null)
-        {
-            animator.SetBool("IsTraining", toState == TroopState.Training);
-            animator.SetBool("InCombat", toState == TroopState.Combat);
-            animator.SetBool("IsMoving", toState == TroopState.Moving);
-        }
-
-        // Handle navigation
-        if (navAgent != null)
-        {
-            navAgent.isStopped = (toState == TroopState.Training || toState == TroopState.Idle);
-        }
-    }
-
-    // Modify the existing StartTraining method to use the state system
-    public void StartTraining()
-    {
-        if (!_isTraining && _currentState != TroopState.Training)
-        {
-            _isTraining = true;
-            SetState(TroopState.Training);
-            StartCoroutine(TrainingCoroutine());
-        }
-    }
-
-    // Modify the TrainingCoroutine to use the new progress system
-    IEnumerator TrainingCoroutine()
-    {
-        float timer = 0f;
-        _trainingProgress = 0f;
-
-        while (timer < trainingTime)
-        {
-            timer += Time.deltaTime;
-            _trainingProgress = timer / trainingTime;
-
-            UpdateTrainingProgress(_trainingProgress);
-
-            // Pulse effect when nearly done
-            if (_trainingProgress > 0.8f)
+            // Handle training animation
+            if (currentState == TroopState.Training)
             {
-                float pulse = Mathf.PingPong(Time.time * 4f, 0.3f) + 0.7f;
-                transform.localScale = Vector3.one * pulse;
+                animator.SetTrigger("Train");
             }
-
-            yield return null;
+            else if (currentState == TroopState.Idle || currentState == TroopState.InCastle)
+            {
+                // Reset any training animation
+                animator.ResetTrigger("Train");
+            }
         }
-
-        // Use the new CompleteTraining method
-        CompleteTraining();
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"⚠️ {troopName}: Animation error - {e.Message}");
+        }
     }
 
-    void HandleCombat()
+    public void StartTrainingProgression()
     {
-        if (_currentTarget == null)
+        currentState = TroopState.Idle;
+        currentBuildingIndex = 0;
+        debugStatus = "Starting training progression";
+        UpdateAnimationState();
+        FindNextTrainingBuilding();
+    }
+
+    public void FindNextTrainingBuilding()
+    {
+        if (troopManager == null)
         {
-            _inCombat = false;
+            Debug.LogError($"❌ {troopName}: TroopManager reference is null!");
             return;
         }
 
-        // Face target
-        Vector3 direction = (_currentTarget.transform.position - transform.position).normalized;
-        transform.rotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        // Get ALL available training buildings in order
+        List<TrainingBuilding> availableBuildings = troopManager.GetAllTrainingBuildingsInOrder();
 
-        // Check attack range
-        float distance = Vector3.Distance(transform.position, _currentTarget.transform.position);
-        if (distance <= attackRange)
+        Debug.Log($"🔍 {troopName}: Looking for building {currentBuildingIndex + 1} of {availableBuildings.Count} total buildings");
+
+        if (currentBuildingIndex >= availableBuildings.Count)
         {
-            // Stop moving
-            if (navAgent != null && navAgent.isActiveAndEnabled)
-                navAgent.isStopped = true;
+            // All buildings completed, go to castle
+            debugStatus = $"All {availableBuildings.Count} buildings completed, moving to castle";
+            Debug.Log($"🎯 {troopName}: Completed all {availableBuildings.Count} buildings, going to castle");
+            MoveToCastle();
+            return;
+        }
 
-            // Attack if cooldown is ready
-            if (_attackCooldown <= 0f)
+        if (currentBuildingIndex < availableBuildings.Count)
+        {
+            TrainingBuilding nextBuilding = availableBuildings[currentBuildingIndex];
+            if (nextBuilding != null)
             {
-                Attack();
-                _attackCooldown = 1f / attackSpeed;
+                bool canTrain = nextBuilding.CanTrainTroopType(troopType);
+                bool canAccept = nextBuilding.CanAcceptTroop();
+                bool isUnlocked = nextBuilding.isUnlocked;
+
+                debugStatus = $"Checking building {currentBuildingIndex + 1}: CanTrain={canTrain}, CanAccept={canAccept}, Unlocked={isUnlocked}";
+
+                if (canTrain && canAccept && isUnlocked)
+                {
+                    currentTrainingBuilding = nextBuilding;
+                    MoveToBuilding(currentTrainingBuilding.transform.position);
+                }
+                else
+                {
+                    // Building not available, wait and try again
+                    debugStatus = $"Building {currentBuildingIndex + 1} not available, waiting...";
+                    Debug.Log($"⏳ {troopName}: Building {currentBuildingIndex + 1} not available (CanTrain: {canTrain}, CanAccept: {canAccept}, Unlocked: {isUnlocked}). Retrying in 2s");
+                    currentState = TroopState.Idle;
+                    UpdateAnimationState();
+                    Invoke("FindNextTrainingBuilding", 2f);
+                }
+            }
+            else
+            {
+                // Building is null, skip to next
+                debugStatus = $"Building {currentBuildingIndex + 1} is null, skipping";
+                Debug.LogWarning($"⚠️ {troopName}: Building {currentBuildingIndex + 1} is null, skipping to next");
+                currentBuildingIndex++;
+                FindNextTrainingBuilding();
             }
         }
-        else
-        {
-            // Move towards target
-            if (navAgent != null && navAgent.isActiveAndEnabled)
-            {
-                navAgent.isStopped = false;
-                navAgent.SetDestination(_currentTarget.transform.position);
-            }
-        }
     }
 
-    void Attack()
+    void MoveToBuilding(Vector3 position)
     {
-        if (animator != null)
-            animator.SetTrigger("Attack");
+        currentState = TroopState.MovingToBuilding;
+        debugStatus = $"Moving to building {currentBuildingIndex + 1} at {position}";
 
-        // Play attack sound
-        if (attackSound != null && _audioSource != null)
-        {
-            _audioSource.PlayOneShot(attackSound);
-        }
-
-        // Create projectile for ranged troops
-        if (attackProjectile != null && attackPoint != null && troopType == TroopType.Archer)
-        {
-            GameObject projectile = Instantiate(attackProjectile, attackPoint.position, attackPoint.rotation);
-            Projectile proj = projectile.GetComponent<Projectile>();
-            if (proj != null)
-            {
-                proj.Initialize(_currentTarget.transform, attackDamage);
-            }
-        }
-        else
-        {
-            // Melee attack - directly damage target
-            _currentTarget.TakeDamage(attackDamage);
-        }
-
-        Debug.Log($"⚔️ {troopName} attacks for {attackDamage} damage!");
-    }
-
-    public void TakeDamage(float damage)
-    {
-        // Visual feedback
-        StartCoroutine(DamageFlash());
-
-        // You could add health system here
-        Debug.Log($"{troopName} takes {damage} damage!");
-    }
-
-    IEnumerator DamageFlash()
-    {
-        Material mat = troopRenderer.material;
-        Color originalColor = mat.color;
-        mat.color = Color.red;
-        yield return new WaitForSeconds(0.1f);
-        mat.color = originalColor;
-    }
-
-    void SetRandomPatrolPoint()
-    {
-        if (navAgent != null && _manager != null)
-        {
-            Vector3 randomPoint = _manager.GetRandomPatrolPoint();
-            navAgent.SetDestination(randomPoint);
-        }
-    }
-
-    public void SetTargetPosition(Vector3 position)
-    {
-        if (navAgent != null && navAgent.isActiveAndEnabled)
+        if (navAgent != null)
         {
             navAgent.SetDestination(position);
+            Debug.Log($"🚶 {troopName} moving to building {currentBuildingIndex + 1} at {position}");
+        }
+        else
+        {
+            Debug.LogError($"❌ {troopName}: NavAgent is null, cannot move to building");
+        }
 
-            // Face the direction of movement
-            Vector3 direction = (position - transform.position).normalized;
-            if (direction != Vector3.zero)
+        UpdateAnimationState();
+    }
+
+    void StartTraining()
+    {
+        currentState = TroopState.Training;
+        debugStatus = $"Training at building {currentBuildingIndex + 1}";
+
+        if (currentTrainingBuilding != null)
+        {
+            currentTrainingBuilding.AssignTroop(this);
+            StartTrainingAnimation();
+
+            float trainingTime = currentTrainingBuilding.GetTrainingTimeForTroop(troopType);
+            Invoke("CompleteTraining", trainingTime);
+
+            Debug.Log($"🏋️ {troopName} training at building {currentBuildingIndex + 1} for {trainingTime} seconds");
+        }
+        else
+        {
+            debugStatus = "Current training building is null, skipping";
+            Debug.LogError($"❌ {troopName}: Current training building is null, skipping to next");
+            currentBuildingIndex++;
+            FindNextTrainingBuilding();
+        }
+
+        UpdateAnimationState();
+    }
+
+    void StartTrainingAnimation()
+    {
+        if (trainingAnimationCoroutine != null)
+            StopCoroutine(trainingAnimationCoroutine);
+
+        trainingAnimationCoroutine = StartCoroutine(TrainingAnimationRoutine());
+    }
+
+    IEnumerator TrainingAnimationRoutine()
+    {
+        // Start building animation if available
+        Animator buildingAnimator = currentTrainingBuilding != null ? currentTrainingBuilding.GetComponent<Animator>() : null;
+        bool hasBuildingAnimation = buildingAnimator != null && buildingAnimator.runtimeAnimatorController != null;
+
+        if (hasBuildingAnimation)
+        {
+            buildingAnimator.SetBool("IsTraining", true);
+        }
+
+        // Start troop training animation
+        UpdateAnimationState();
+
+        // Fallback: scale up/down animation if no building animation
+        if (!hasBuildingAnimation)
+        {
+            while (currentState == TroopState.Training)
             {
-                transform.rotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+                float scaleTime = 0.5f;
+                float timer = 0f;
+                while (timer < scaleTime && currentState == TroopState.Training)
+                {
+                    timer += Time.deltaTime;
+                    float scale = Mathf.Lerp(1f, 1.3f, timer / scaleTime);
+                    transform.localScale = originalScale * scale;
+                    yield return null;
+                }
+
+                timer = 0f;
+                while (timer < scaleTime && currentState == TroopState.Training)
+                {
+                    timer += Time.deltaTime;
+                    float scale = Mathf.Lerp(1.3f, 1f, timer / scaleTime);
+                    transform.localScale = originalScale * scale;
+                    yield return null;
+                }
+            }
+        }
+        else
+        {
+            // Just wait while building animation plays
+            while (currentState == TroopState.Training)
+            {
+                yield return null;
             }
         }
     }
 
-    public void SetSelected(bool selected)
+    void StopTrainingAnimation()
     {
-        _isSelected = selected;
-        if (selectionEffect != null)
+        if (trainingAnimationCoroutine != null)
         {
-            selectionEffect.SetActive(selected);
+            StopCoroutine(trainingAnimationCoroutine);
+            trainingAnimationCoroutine = null;
+        }
+
+        transform.localScale = originalScale;
+
+        // Stop building animation
+        if (currentTrainingBuilding != null)
+        {
+            Animator buildingAnimator = currentTrainingBuilding.GetComponent<Animator>();
+            if (buildingAnimator != null)
+            {
+                buildingAnimator.SetBool("IsTraining", false);
+            }
         }
     }
 
-    void UpdateVisuals()
+    void CompleteTraining()
     {
-        // Update level text
-        if (levelText != null)
+        if (currentState != TroopState.Training)
         {
-            levelText.text = $"Lvl {_level}";
+            Debug.LogWarning($"⚠️ {troopName}: CompleteTraining called but state is {currentState}");
+            return;
         }
 
-        // Update color based on rarity
-        if (troopRenderer != null)
+        StopTrainingAnimation();
+
+        // Calculate power increase
+        float powerIncrease = CalculatePowerIncrease();
+        trainingPowerBonus += powerIncrease;
+        currentPower = basePower + trainingPowerBonus;
+        trainingBuildingsCompleted++;
+
+        // Give one-time income for completing training
+        if (troopManager != null)
         {
-            troopRenderer.material.color = GetRarityColor();
+            troopManager.OnTroopTrained(this, powerIncrease);
         }
 
-        // Update rarity effect
-        if (rarityEffect != null)
+        debugStatus = $"Completed training at building {currentBuildingIndex + 1}, power +{powerIncrease}";
+        Debug.Log($"✅ {troopName} completed training at building {currentBuildingIndex + 1}! Power +{powerIncrease}. Total: {currentPower}");
+
+        // Release building
+        if (currentTrainingBuilding != null)
         {
-            rarityEffect.SetActive(rarity >= TroopRarity.Rare);
+            currentTrainingBuilding.ReleaseTroop();
+            currentTrainingBuilding = null;
+        }
+
+        CancelInvoke("CompleteTraining");
+
+        // Move to next building
+        currentBuildingIndex++;
+        debugStatus = $"Moving to next building: {currentBuildingIndex + 1}";
+        FindNextTrainingBuilding();
+
+        UpdateAnimationState();
+    }
+
+    float CalculatePowerIncrease()
+    {
+        float baseIncrease = 5f;
+
+        switch (rarity)
+        {
+            case TroopRarity.Common: return baseIncrease * 1f;
+            case TroopRarity.Uncommon: return baseIncrease * 1.2f;
+            case TroopRarity.Rare: return baseIncrease * 1.5f;
+            case TroopRarity.Epic: return baseIncrease * 2f;
+            case TroopRarity.Legendary: return baseIncrease * 3f;
+            default: return baseIncrease;
         }
     }
 
-    Color GetRarityColor()
+    void MoveToCastle()
+    {
+        currentState = TroopState.MovingToCastle;
+        Vector3 castlePosition = troopManager.GetCastlePosition();
+        debugStatus = $"Moving to castle at {castlePosition}";
+
+        if (navAgent != null)
+        {
+            navAgent.SetDestination(castlePosition);
+            Debug.Log($"🏰 {troopName} completed all training! Moving to castle with {currentPower} power");
+        }
+        else
+        {
+            Debug.LogError($"❌ {troopName}: NavAgent is null, cannot move to castle");
+            // Fallback: teleport to castle
+            transform.position = castlePosition;
+            EnterCastle();
+        }
+
+        UpdateAnimationState();
+    }
+
+    void EnterCastle()
+    {
+        currentState = TroopState.InCastle;
+        debugStatus = "Stored in castle";
+
+        // Stop all animations
+        if (hasAnimator)
+        {
+            animator.SetBool("Walking", false);
+            animator.ResetTrigger("Train");
+        }
+
+        // Hide the troop completely
+        gameObject.SetActive(false);
+
+        // Store in castle
+        troopManager.StoreTroopInCastle(this);
+
+        Debug.Log($"🏰 {troopName} stored in castle with final power: {currentPower}");
+    }
+
+    float GetBasePowerByRarity()
     {
         switch (rarity)
         {
-            case TroopRarity.Common: return Color.white;
-            case TroopRarity.Uncommon: return Color.green;
-            case TroopRarity.Rare: return Color.blue;
-            case TroopRarity.Epic: return Color.magenta;
-            case TroopRarity.Legendary: return Color.yellow;
-            default: return Color.white;
+            case TroopRarity.Common: return 10f;
+            case TroopRarity.Uncommon: return 15f;
+            case TroopRarity.Rare: return 25f;
+            case TroopRarity.Epic: return 40f;
+            case TroopRarity.Legendary: return 65f;
+            default: return 10f;
         }
     }
 
-    void OnMouseDown()
+    // War methods
+    public void SendToWar(Vector3 battlePosition)
     {
-        SetSelected(true);
-        if (_manager != null)
+        gameObject.SetActive(true);
+        currentState = TroopState.MovingToWar;
+        if (navAgent != null)
         {
-            _manager.SelectTroop(this);
+            navAgent.SetDestination(battlePosition);
         }
+        UpdateAnimationState();
     }
 
-    public double GetCurrentIncome()
+    public bool IsReadyForBattle()
     {
-        return baseIncomePerSecond * _level * GetRarityMultiplier();
-    }
-
-    float GetRarityMultiplier()
-    {
-        switch (rarity)
-        {
-            case TroopRarity.Common: return 1.0f;
-            case TroopRarity.Uncommon: return 1.5f;
-            case TroopRarity.Rare: return 2.0f;
-            case TroopRarity.Epic: return 3.0f;
-            case TroopRarity.Legendary: return 5.0f;
-            default: return 1.0f;
-        }
+        return currentState == TroopState.InCastle;
     }
 
     public bool IsTraining()
     {
-        return _isTraining;
+        return currentState == TroopState.Training;
+    }
+
+    public float GetCombatValue()
+    {
+        return currentPower;
     }
 
     public int GetLevel()
     {
-        return _level;
+        return Mathf.FloorToInt(currentPower / 10f) + 1;
     }
 
-    public TroopRarity GetRarity()
+    public void SetSelected(bool selected)
     {
-        return rarity;
+        // Selection logic if needed
+        if (hasAnimator)
+        {
+            animator.SetBool("Selected", selected);
+        }
+    }
+
+    public void CancelTraining()
+    {
+        CancelInvoke("CompleteTraining");
+        CancelInvoke("FindNextTrainingBuilding");
+
+        if (currentState == TroopState.Training)
+        {
+            StopTrainingAnimation();
+            currentState = TroopState.Idle;
+        }
+
+        if (currentTrainingBuilding != null)
+        {
+            currentTrainingBuilding.ReleaseTroop();
+            currentTrainingBuilding = null;
+        }
+
+        UpdateAnimationState();
+    }
+
+    // Debug method to check current status
+    public string GetDebugStatus()
+    {
+        return $"{troopName}: {currentState} - {debugStatus} (Building {currentBuildingIndex + 1})";
+    }
+
+    // Animation helper method
+    public void ForceAnimationUpdate()
+    {
+        UpdateAnimationState();
+    }
+
+    void OnDestroy()
+    {
+        if (trainingAnimationCoroutine != null)
+        {
+            StopCoroutine(trainingAnimationCoroutine);
+        }
     }
 }

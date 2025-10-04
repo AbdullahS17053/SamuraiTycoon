@@ -289,7 +289,7 @@ NavMeshAgent:
   m_Acceleration: 8
   avoidancePriority: 50
   m_AngularSpeed: 120
-  m_StoppingDistance: 0
+  m_StoppingDistance: 1
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
   m_AutoRepath: 1
@@ -363,21 +363,14 @@ MonoBehaviour:
   troopName: Samurai
   troopType: 0
   rarity: 0
-  baseIncomePerSecond: 1
-  trainingTime: 5
-  moveSpeed: 3.5
-  attackRange: 2
-  attackDamage: 10
-  attackSpeed: 1
+  currentPower: 10
+  basePower: 10
+  trainingPowerBonus: 0
+  trainingBuildingsCompleted: 0
+  currentState: 0
+  currentTrainingBuilding: {fileID: 0}
+  currentBuildingIndex: 0
   animator: {fileID: 3000920115710250546}
-  levelText: {fileID: 0}
-  selectionEffect: {fileID: 0}
-  troopRenderer: {fileID: 0}
-  rarityEffect: {fileID: 0}
-  navAgent: {fileID: 1224350982017716697}
-  attackProjectile: {fileID: 0}
-  attackPoint: {fileID: 0}
-  attackSound: {fileID: 0}
 --- !u!1 &4415667529538280403
 GameObject:
   m_ObjectHideFlags: 0
@@ -460,6 +453,14 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4677938815812654, guid: b49aa43dd99419842bd25be74ac6d48d, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 95560493210536004, guid: b49aa43dd99419842bd25be74ac6d48d, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 95560493210536004, guid: b49aa43dd99419842bd25be74ac6d48d, type: 3}
+      propertyPath: m_ApplyRootMotion
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

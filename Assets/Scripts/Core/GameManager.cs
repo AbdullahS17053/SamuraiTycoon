@@ -67,13 +67,14 @@ public class GameManager : MonoBehaviour
 
         if (Troops != null && enableTroopSystem)
         {
-            Troops.Initialize(Save.Data, Economy);
+            Troops.Initialize();
             Debug.Log("✅ TroopManager initialized");
         }
 
         if (Prestige != null)
         {
-            Prestige.Initialize(Save.Data, Economy);
+            // ADD THIS LINE:
+            Prestige.Initialize();
             Debug.Log("✅ PrestigeManager initialized");
         }
 
@@ -110,7 +111,7 @@ public class GameManager : MonoBehaviour
         // Tick economy
         Economy.Tick(Time.deltaTime);
 
-        // Tick troops if enabled
+        // FIXED: Tick TroopManager if enabled
         if (Troops != null && enableTroopSystem)
         {
             Troops.Tick(Time.deltaTime);

@@ -23,10 +23,10 @@ MonoBehaviour:
   showMaxLevelWarning: 1
   activationCost: 300
   costMultiplier: 1.5
-  baseCapacity: 2
+  baseCapacity: 1
   capacityPerLevel: 1
   maxCapacity: 10
-  currentWorkers: 0
+  currentWorkers: 1
   hireCost: 200
   hireCostMultiplier: 1.5
   effectDescription: Increases elite samurai capacity

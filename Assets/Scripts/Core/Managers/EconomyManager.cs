@@ -71,7 +71,7 @@ public class EconomyManager
         _data.Gold += amount;
         UpdateDebugView();
 
-        Debug.Log($"💰 Gold: {oldGold} → {_data.Gold} (+{amount})");
+        //+ Debug.Log($"💰 Gold: {oldGold} → {_data.Gold} (+{amount})");
         OnGoldChanged?.Invoke(amount);
     }
 

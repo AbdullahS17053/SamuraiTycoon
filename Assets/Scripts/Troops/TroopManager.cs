@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using System.Collections;
 
 public class TroopManager : MonoBehaviour
 {
@@ -11,34 +12,36 @@ public class TroopManager : MonoBehaviour
     public Transform troopContainer;
     public int baseMaxTroops = 20;
 
-    [Header("Training Configuration")]
-    public double baseTroopCost = 100.0;
-    public float troopCostMultiplier = 1.15f;
-    public float autoTrainInterval = 30.0f;
+    [Header("Training & Barracks")]
+    public Transform barracksPosition;
+    public Transform castleStoragePoint;
 
-    [Header("Training Areas")]
-    public List<Transform> trainingAreas = new List<Transform>();
-    public Vector3 patrolBounds = new Vector3(50, 0, 50);
+    [Header("Troop Spawning")]
+    public float spawnInterval = 60f;
+    public int troopsPerSpawn = 1;
+    public bool autoSpawnEnabled = true;
 
     [Header("Troop Types")]
     public TroopTypeConfig[] troopTypes;
 
-    private List<TroopUnit> _troops = new List<TroopUnit>();
-    private TroopUnit _selectedTroop;
-    private double _totalTroopIncome = 0;
-    private EconomyManager _economy;
-    private ZoneManager _zoneManager;
-    private float _autoTrainTimer = 0f;
-    private int _troopsTrainedThisSession = 0;
-    private bool _isInitialized = false;
+    [Header("Income Settings")]
+    public float incomePerTraining = 25f;
+    public float incomeMultiplierByRarity = 1.5f;
+
+    private List<TroopUnit> allTroops = new List<TroopUnit>();
+    private List<TroopUnit> castleTroops = new List<TroopUnit>();
+    private List<TrainingBuilding> trainingBuildings = new List<TrainingBuilding>();
+    private TroopUnit selectedTroop;
+    private EconomyManager economy;
+    private BuildingManager3D buildingManager;
+    private Coroutine spawnCoroutine;
 
     [System.Serializable]
     public class TroopTypeConfig
     {
         public TroopUnit.TroopType type;
         public string displayName;
-        public double baseIncome;
-        public float trainingTime;
+        public float baseTrainingTime;
         public GameObject prefab;
         public Color troopColor;
     }
@@ -55,355 +58,386 @@ public class TroopManager : MonoBehaviour
         }
     }
 
-    public void Initialize(GameData data, EconomyManager economy)
+    void Start()
     {
-        _economy = economy;
-        _zoneManager = FindObjectOfType<ZoneManager>();
+        economy = GameManager.Instance != null ? GameManager.Instance.Economy : null;
+        buildingManager = BuildingManager3D.Instance;
 
-        // Load saved troops or create initial troops
-        InitializeTroops();
+        RefreshTrainingBuildings();
 
-        _isInitialized = true;
-        Debug.Log($"🎖️ TroopManager initialized with {_troops.Count} troops");
+        if (autoSpawnEnabled)
+        {
+            StartAutoSpawning();
+        }
+
+        Debug.Log($"⚔️ TroopManager initialized with {trainingBuildings.Count} training buildings");
     }
 
-    public void ResetAllTroops()
+    public void Initialize()
     {
-        foreach (var troop in _troops)
+        Debug.Log("⚔️ TroopManager initialized via GameManager");
+    }
+
+    public void Tick(float deltaTime)
+    {
+        // Update logic if needed
+    }
+
+    // CRITICAL FIX: Get training buildings in proper order
+    public List<TrainingBuilding> GetAllTrainingBuildingsInOrder()
+    {
+        if (trainingBuildings == null || trainingBuildings.Count == 0)
         {
-            if (troop != null)
+            Debug.LogWarning("⚠️ No training buildings found!");
+            return new List<TrainingBuilding>();
+        }
+
+        // Sort by building order, then by name as fallback
+        var orderedBuildings = trainingBuildings
+            .Where(b => b != null && b.isUnlocked)
+            .OrderBy(b => b.buildingOrder)
+            .ThenBy(b => b.displayName)
+            .ToList();
+
+        Debug.Log($"🏗️ Found {orderedBuildings.Count} unlocked training buildings in order: {string.Join(", ", orderedBuildings.Select(b => $"{b.displayName}({b.buildingOrder})"))}");
+
+        return orderedBuildings;
+    }
+
+    public void RefreshTrainingBuildings()
+    {
+        trainingBuildings.Clear();
+
+        // Find all TrainingBuilding components in the scene
+        TrainingBuilding[] sceneBuildings = FindObjectsOfType<TrainingBuilding>();
+        foreach (TrainingBuilding building in sceneBuildings)
+        {
+            if (!trainingBuildings.Contains(building))
             {
-                Destroy(troop.gameObject);
+                trainingBuildings.Add(building);
+                Debug.Log($"🏗️ Found training building: {building.displayName} (Order: {building.buildingOrder}, Unlocked: {building.isUnlocked})");
             }
         }
-        _troops.Clear();
-        _troopsTrainedThisSession = 0;
 
-        // Reinitialize troops
-        InitializeTroops();
-        Debug.Log("🔄 All troops reset and reinitialized");
-    }
-
-    public void ReinitializeTroops()
-    {
-        InitializeTroops();
-    }
-
-    // Make InitializeTroops protected instead of private
-    protected void InitializeTroops()
-    {
-        // Clear existing troops first
-        foreach (var troop in _troops)
+        // Also check BuildingManager if it exists
+        if (BuildingManager3D.Instance != null)
         {
-            if (troop != null)
+            foreach (var buildingObj in BuildingManager3D.Instance.BuildingObjects.Values)
             {
-                Destroy(troop.gameObject);
+                if (buildingObj != null)
+                {
+                    TrainingBuilding trainingBuilding = buildingObj.GetComponent<TrainingBuilding>();
+                    if (trainingBuilding != null && !trainingBuildings.Contains(trainingBuilding))
+                    {
+                        trainingBuildings.Add(trainingBuilding);
+                        Debug.Log($"🏗️ Found training building from BuildingManager: {trainingBuilding.displayName}");
+                    }
+                }
             }
         }
-        _troops.Clear();
 
-        // Create initial troops
-        for (int i = 0; i < 3; i++)
-        {
-            CreateNewTroop(GetRandomTroopType(), GetRandomRarity());
-        }
-
-        Debug.Log($"🎖️ Troops reinitialized with {_troops.Count} troops");
+        Debug.Log($"🔧 Refreshed training buildings: {trainingBuildings.Count} total found");
     }
 
-    public void CreateNewTroop(TroopUnit.TroopType type, TroopUnit.TroopRarity rarity)
+    // Auto-spawning system
+    public void StartAutoSpawning()
     {
-        if (!_isInitialized) return;
+        if (spawnCoroutine != null)
+            StopCoroutine(spawnCoroutine);
 
+        spawnCoroutine = StartCoroutine(SpawnRoutine());
+    }
+
+    IEnumerator SpawnRoutine()
+    {
+        while (autoSpawnEnabled)
+        {
+            yield return new WaitForSeconds(spawnInterval);
+
+            for (int i = 0; i < troopsPerSpawn; i++)
+            {
+                if (GetTotalTroops() < GetMaxTroops())
+                {
+                    CreateNewTroop(GetRandomTroopType(), GetRandomRarity());
+                }
+                else
+                {
+                    Debug.Log("⏹️ Max troop capacity reached, cannot spawn more");
+                }
+            }
+        }
+    }
+
+    public TroopUnit CreateNewTroop(TroopUnit.TroopType type, TroopUnit.TroopRarity rarity)
+    {
         if (GetTotalTroops() >= GetMaxTroops())
         {
             Debug.Log("❌ Maximum troop capacity reached!");
-            return;
+            return null;
         }
 
         var typeConfig = troopTypes.FirstOrDefault(t => t.type == type);
         if (typeConfig == null || typeConfig.prefab == null)
         {
-            Debug.LogError($"❌ No configuration found for troop type: {type}");
-            return;
+            Debug.LogError($"❌ No configuration or prefab found for troop type: {type}");
+            return null;
         }
 
         GameObject troopObj = Instantiate(typeConfig.prefab, troopContainer);
         TroopUnit troop = troopObj.GetComponent<TroopUnit>();
-
         if (troop != null)
         {
             string troopId = "troop_" + System.Guid.NewGuid().ToString().Substring(0, 8);
             string troopName = $"{typeConfig.displayName} {GetNextTroopNumber(type)}";
-
             troop.Initialize(troopId, troopName, type, rarity, this);
+            allTroops.Add(troop);
 
-            // Position in random training area
-            PositionTroop(troop);
+            PositionTroopAtBarracks(troop);
+            troop.StartTrainingProgression();
 
-            _troops.Add(troop);
-            _troopsTrainedThisSession++;
-
-            Debug.Log($"🎖️ New {rarity} {typeConfig.displayName} created: {troopName}");
+            Debug.Log($"✅ New {rarity} {typeConfig.displayName} created: {troopName}");
+            return troop;
         }
+
+        Debug.LogError("❌ Failed to get TroopUnit component from prefab");
+        Destroy(troopObj);
+        return null;
     }
 
-    void PositionTroop(TroopUnit troop)
+    // One-time income when troop completes training
+    public void OnTroopTrained(TroopUnit troop, float powerIncrease)
     {
-        if (trainingAreas.Count > 0)
+        if (economy != null)
         {
-            Transform randomArea = trainingAreas[Random.Range(0, trainingAreas.Count)];
-            Vector3 randomPos = randomArea.position + new Vector3(
-                Random.Range(-8f, 8f),
-                0,
-                Random.Range(-8f, 8f)
-            );
-            troop.transform.position = randomPos;
-            troop.SetTargetPosition(randomPos);
-        }
-    }
+            float income = incomePerTraining;
 
-    public void TrainTroop(TroopUnit troop)
-    {
-        if (troop != null && !troop.IsTraining())
-        {
-            troop.StartTraining();
-        }
-    }
-
-    public void TrainAllTroops()
-    {
-        foreach (var troop in _troops)
-        {
-            if (!troop.IsTraining())
+            switch (troop.rarity)
             {
-                TrainTroop(troop);
+                case TroopUnit.TroopRarity.Uncommon: income *= 1.2f; break;
+                case TroopUnit.TroopRarity.Rare: income *= 1.5f; break;
+                case TroopUnit.TroopRarity.Epic: income *= 2f; break;
+                case TroopUnit.TroopRarity.Legendary: income *= 3f; break;
+            }
+
+            income += powerIncrease * 2f;
+
+            economy.AddGold(income);
+            Debug.Log($"💰 Earned {income} gold from {troop.troopName} training completion");
+        }
+    }
+
+    public Vector3 GetBarracksPosition()
+    {
+        return barracksPosition != null ? barracksPosition.position : Vector3.zero;
+    }
+
+    public Vector3 GetCastlePosition()
+    {
+        return castleStoragePoint != null ? castleStoragePoint.position : Vector3.zero;
+    }
+
+    public void StoreTroopInCastle(TroopUnit troop)
+    {
+        if (troop != null && !castleTroops.Contains(troop))
+        {
+            castleTroops.Add(troop);
+            troop.transform.position = GetCastlePosition();
+            troop.gameObject.SetActive(false);
+
+            Debug.Log($"🏰 Troop {troop.troopName} stored in castle. Total castle troops: {castleTroops.Count}");
+        }
+    }
+
+    // PRESTIGE METHODS
+    public void ResetAllTroops()
+    {
+        Debug.Log("🔄 Resetting all troops for prestige...");
+
+        // Clear castle troops
+        foreach (var troop in castleTroops.ToList())
+        {
+            if (troop != null)
+            {
+                Destroy(troop.gameObject);
             }
         }
-    }
+        castleTroops.Clear();
 
-    public void OnTroopTrained(TroopUnit troop)
-    {
-        if (!_isInitialized) return;
-
-        // Add income from trained troop
-        double income = troop.GetCurrentIncome();
-        _totalTroopIncome += income;
-
-        // Visual feedback
-        ShowIncomePopup(troop.transform.position, income);
-
-        Debug.Log($"💰 {troop.troopName} now generates {income}/s");
-    }
-
-    public void PurchaseNewTroop()
-    {
-        if (!_isInitialized || _economy == null) return;
-
-        double cost = GetNextTroopCost();
-
-        if (_economy.SpendGold(cost))
+        // Reset all active troops
+        foreach (var troop in allTroops.ToList())
         {
-            CreateNewTroop(GetRandomTroopType(), GetRandomRarity());
-            Debug.Log($"🎖️ Purchased new troop for {cost} gold");
-        }
-        else
-        {
-            Debug.Log("❌ Not enough gold to purchase new troop!");
-        }
-    }
-
-    public void SelectTroop(TroopUnit troop)
-    {
-        // Deselect previous troop
-        if (_selectedTroop != null)
-        {
-            _selectedTroop.SetSelected(false);
-        }
-
-        _selectedTroop = troop;
-
-        if (_selectedTroop != null)
-        {
-            _selectedTroop.SetSelected(true);
-            Debug.Log($"🎯 Selected troop: {_selectedTroop.troopName} Lvl {_selectedTroop.GetLevel()}");
-        }
-    }
-
-    public void MoveSelectedTroop(Vector3 position)
-    {
-        if (_selectedTroop != null)
-        {
-            _selectedTroop.SetTargetPosition(position);
-        }
-    }
-
-    public Vector3 GetRandomPatrolPoint()
-    {
-        Vector3 center = Vector3.zero;
-        if (trainingAreas.Count > 0)
-        {
-            center = trainingAreas[Random.Range(0, trainingAreas.Count)].position;
-        }
-
-        return center + new Vector3(
-            Random.Range(-patrolBounds.x, patrolBounds.x),
-            0,
-            Random.Range(-patrolBounds.z, patrolBounds.z)
-        );
-    }
-
-    void ShowIncomePopup(Vector3 position, double amount)
-    {
-        // You can implement a floating text system here
-        Debug.Log($"💰 +{amount} from troop at {position}");
-    }
-
-    public void Tick(float deltaTime)
-    {
-        if (!_isInitialized) return;
-
-        // Handle troop movement input
-        if (Input.GetMouseButtonDown(1) && _selectedTroop != null) // Right click
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit))
+            if (troop != null)
             {
-                MoveSelectedTroop(hit.point);
-            }
-        }
+                troop.CancelTraining();
+                troop.currentState = TroopUnit.TroopState.Idle;
+                troop.currentBuildingIndex = 0;
+                troop.trainingPowerBonus = 0;
+                troop.currentPower = troop.basePower;
+                troop.trainingBuildingsCompleted = 0;
 
-        // Auto-train troops periodically
-        _autoTrainTimer += deltaTime;
-        if (_autoTrainTimer >= autoTrainInterval)
-        {
-            AutoTrainIdleTroops();
-            _autoTrainTimer = 0f;
-        }
+                troop.transform.position = GetBarracksPosition() + new Vector3(
+                    Random.Range(-3f, 3f),
+                    0,
+                    Random.Range(-3f, 3f)
+                );
 
-        // Generate passive income from non-training troops
-        GeneratePassiveIncome();
-    }
-
-    void AutoTrainIdleTroops()
-    {
-        int trained = 0;
-        foreach (var troop in _troops)
-        {
-            if (!troop.IsTraining())
-            {
-                TrainTroop(troop);
-                trained++;
-            }
-        }
-
-        if (trained > 0)
-        {
-            Debug.Log($"🤖 Auto-trained {trained} idle troops");
-        }
-    }
-
-    void GeneratePassiveIncome()
-    {
-        if (!_isInitialized || _economy == null) return;
-
-        double passiveIncome = 0;
-
-        foreach (var troop in _troops)
-        {
-            if (!troop.IsTraining())
-            {
-                // Apply zone multiplier
-                double troopIncome = troop.GetCurrentIncome() * Time.deltaTime;
-                if (_zoneManager != null)
+                if (troop.navAgent != null)
                 {
-                    troopIncome *= _zoneManager.GetZoneIncomeMultiplier();
+                    troop.navAgent.ResetPath();
                 }
-                passiveIncome += troopIncome;
+
+                troop.gameObject.SetActive(true);
+                troop.StartTrainingProgression();
             }
         }
 
-        if (passiveIncome > 0)
+        // Clear training building queues
+        foreach (var building in trainingBuildings)
         {
-            _economy.AddGold(passiveIncome);
+            if (building != null)
+            {
+                building.ReleaseTroop();
+                building.trainingQueue.Clear();
+            }
         }
+
+        Debug.Log($"🔄 Reset {allTroops.Count} troops for prestige");
     }
 
+    public void ReinitializeTroops()
+    {
+        Debug.Log("🔁 Reinitializing troops after soft reset...");
+
+        // Keep castle troops but reset their state
+        foreach (var troop in castleTroops.ToList())
+        {
+            if (troop != null)
+            {
+                troop.gameObject.SetActive(true);
+                troop.currentState = TroopUnit.TroopState.Idle;
+                troop.StartTrainingProgression();
+            }
+        }
+        castleTroops.Clear();
+
+        // Reset all active troops but keep their power and progression
+        foreach (var troop in allTroops)
+        {
+            if (troop != null && troop.currentState != TroopUnit.TroopState.InCastle)
+            {
+                troop.currentState = TroopUnit.TroopState.Idle;
+                troop.CancelTraining();
+                troop.transform.position = GetBarracksPosition() + new Vector3(
+                    Random.Range(-3f, 3f),
+                    0,
+                    Random.Range(-3f, 3f)
+                );
+
+                if (troop.navAgent != null)
+                {
+                    troop.navAgent.ResetPath();
+                }
+                troop.FindNextTrainingBuilding();
+            }
+        }
+
+        foreach (var building in trainingBuildings)
+        {
+            if (building != null)
+            {
+                building.trainingQueue.Clear();
+            }
+        }
+
+        Debug.Log($"🔁 Reinitialized {allTroops.Count} troops (soft reset)");
+    }
 
     // Helper methods
-    TroopUnit.TroopType GetRandomTroopType()
+    private void PositionTroopAtBarracks(TroopUnit troop)
     {
-        var availableTypes = System.Enum.GetValues(typeof(TroopUnit.TroopType));
-        return (TroopUnit.TroopType)availableTypes.GetValue(Random.Range(0, availableTypes.Length));
+        Vector3 randomOffset = new Vector3(
+            Random.Range(-3f, 3f),
+            0,
+            Random.Range(-3f, 3f)
+        );
+        troop.transform.position = GetBarracksPosition() + randomOffset;
     }
 
-    TroopUnit.TroopRarity GetRandomRarity()
+    private TroopUnit.TroopType GetRandomTroopType()
+    {
+        if (troopTypes == null || troopTypes.Length == 0)
+        {
+            Debug.LogError("❌ No troop types configured!");
+            return TroopUnit.TroopType.Samurai;
+        }
+
+        var availableTypes = troopTypes.Where(t => t.prefab != null).Select(t => t.type).ToArray();
+        if (availableTypes.Length == 0)
+        {
+            Debug.LogError("❌ No valid troop types with prefabs found!");
+            return TroopUnit.TroopType.Samurai;
+        }
+
+        return availableTypes[Random.Range(0, availableTypes.Length)];
+    }
+
+    private TroopUnit.TroopRarity GetRandomRarity()
     {
         float rand = Random.Range(0f, 1f);
-        if (rand < 0.01f) return TroopUnit.TroopRarity.Legendary;      // 1%
-        else if (rand < 0.05f) return TroopUnit.TroopRarity.Epic;      // 4%
-        else if (rand < 0.15f) return TroopUnit.TroopRarity.Rare;      // 10%
-        else if (rand < 0.40f) return TroopUnit.TroopRarity.Uncommon;  // 25%
-        else return TroopUnit.TroopRarity.Common;                      // 60%
+        if (rand < 0.01f) return TroopUnit.TroopRarity.Legendary;
+        else if (rand < 0.05f) return TroopUnit.TroopRarity.Epic;
+        else if (rand < 0.15f) return TroopUnit.TroopRarity.Rare;
+        else if (rand < 0.40f) return TroopUnit.TroopRarity.Uncommon;
+        else return TroopUnit.TroopRarity.Common;
     }
 
-    int GetNextTroopNumber(TroopUnit.TroopType type)
+    private int GetNextTroopNumber(TroopUnit.TroopType type)
     {
-        return _troops.Count(t => t.troopType == type) + 1;
+        return allTroops.Count(t => t.troopType == type) + 1;
     }
 
-    public double GetNextTroopCost()
-    {
-        return baseTroopCost * Mathf.Pow(troopCostMultiplier, _troopsTrainedThisSession);
-    }
+    public int GetTotalTroops() => allTroops.Count;
+    public int GetReadyTroops() => castleTroops.Count;
+    public int GetTrainingTroops() => allTroops.Count(t => t.IsTraining());
+    public int GetMaxTroops() => baseMaxTroops;
 
-    public int GetTotalTroops()
-    {
-        return _troops.Count;
-    }
-
-    public int GetMaxTroops()
-    {
-        int baseMax = baseMaxTroops;
-        if (_zoneManager != null)
-        {
-            baseMax += _zoneManager.GetExtraTroopCapacity();
-        }
-        return baseMax;
-    }
-
-    public int GetActiveTroops()
-    {
-        return _troops.Count(t => !t.IsTraining());
-    }
-
-    public double GetTotalTroopIncome()
-    {
-        return _totalTroopIncome;
-    }
-
-    public int GetTroopsTraining()
-    {
-        return _troops.Count(t => t.IsTraining());
-    }
-
-    [ContextMenu("Create Test Troop")]
-    public void CreateTestTroop()
+    [ContextMenu("Spawn Test Troop")]
+    public void SpawnTestTroop()
     {
         CreateNewTroop(GetRandomTroopType(), GetRandomRarity());
     }
 
-    [ContextMenu("Train All Troops")]
-    public void TrainAllTroopsCommand()
+    [ContextMenu("Debug All Troops Status")]
+    public void DebugAllTroops()
     {
-        TrainAllTroops();
+        Debug.Log("=== TROOP STATUS ===");
+        foreach (var troop in allTroops)
+        {
+            if (troop != null)
+            {
+                Debug.Log(troop.GetDebugStatus());
+            }
+        }
+        Debug.Log($"Total troops: {allTroops.Count}, In castle: {castleTroops.Count}");
     }
 
-    [ContextMenu("Purchase Troop")]
-    public void PurchaseTroopCommand()
+    [ContextMenu("Refresh Buildings")]
+    public void RefreshBuildings()
     {
-        PurchaseNewTroop();
+        RefreshTrainingBuildings();
+    }
+
+    [ContextMenu("Force All Troops to Next Building")]
+    public void ForceAllToNextBuilding()
+    {
+        foreach (var troop in allTroops)
+        {
+            if (troop != null && troop.currentState == TroopUnit.TroopState.Training)
+            {
+                troop.CancelTraining();
+                troop.currentBuildingIndex++;
+                troop.FindNextTrainingBuilding();
+            }
+        }
     }
 }
