@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Shogunate Authority
   description: Establish your authority as regional shogun
-  icon: {fileID: 0}
+  icon: {fileID: -842201563, guid: b365d65ebf1522d46beaf8f609945da7, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Claim Authority

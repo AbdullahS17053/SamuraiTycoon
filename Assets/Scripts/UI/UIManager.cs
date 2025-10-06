@@ -39,10 +39,10 @@ public class UIManager
     private void UpdateCurrencyDisplay(double change)
     {
         if (goldText != null)
-            goldText.text = FormatNumber(_data.Gold) + " Gold";
+            goldText.text = FormatNumber(_data.Gold);
 
         if (honorText != null)
-            honorText.text = FormatNumber(_data.Honor) + " Honor";
+            honorText.text = FormatNumber(_data.Honor);
 
         if (samuraiText != null)
             samuraiText.text = _data.Samurai + " Samurai";

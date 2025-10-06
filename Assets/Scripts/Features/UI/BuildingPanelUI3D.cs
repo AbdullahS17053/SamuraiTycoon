@@ -6,6 +6,8 @@ using System.Collections.Generic;
 
 public class BuildingPanelUI3D : MonoBehaviour
 {
+    public static BuildingPanelUI3D Instance;
+
     [Header("Building Info UI")]
     public TextMeshProUGUI buildingNameText;
     public TextMeshProUGUI buildingLevelText;
@@ -54,6 +56,18 @@ public class BuildingPanelUI3D : MonoBehaviour
     private List<GameObject> _moduleButtons = new List<GameObject>();
     private List<ModuleButtonController> _moduleControllers = new List<ModuleButtonController>();
     private bool _isInitialized = false;
+
+    public Image ThemedBuilding;
+    public Image BuildingBanner;
+
+    private void OnEnable()
+    {
+        Instance = this;
+    }
+    private void OnDisable()
+    {
+        Instance = null;
+    }
 
     public void Initialize(Building building, BuildingConfig config, BuildingData data, EconomyManager economy)
     {
@@ -119,6 +133,9 @@ public class BuildingPanelUI3D : MonoBehaviour
         SafeSetText(buildingLevelText, $"Level {_data.Level}");
         SafeSetText(buildingDescriptionText, _config.Description);
 
+        ThemedBuilding.color = _config.ThemeColor;
+        BuildingBanner.sprite = _config.Banner;
+
         // Income and costs
         double income = CalculateTotalIncome();
         double upgradeCost = CalculateUpgradeCost();
@@ -156,11 +173,17 @@ public class BuildingPanelUI3D : MonoBehaviour
                                        _economy != null &&
                                        _economy.Gold >= upgradeCost;
         }
+        updateSlider();
 
+
+    }
+
+    public void updateSlider()
+    {
         // Level slider - only if assigned
         if (buildingLevelSlider != null)
         {
-            buildingLevelSlider.maxValue = 20;
+            buildingLevelSlider.maxValue = 100;
             buildingLevelSlider.value = _data.Level;
         }
     }

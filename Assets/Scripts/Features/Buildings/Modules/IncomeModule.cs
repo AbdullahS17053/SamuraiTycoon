@@ -59,6 +59,8 @@ public class IncomeModule : BuildingModule
 
         if (GameManager.Instance.Economy.SpendGold(cost))
         {
+
+            BuildingPanelUI3D.Instance.updateSlider();
             runtimeData.timesActivated++;
             runtimeData.level++;
 

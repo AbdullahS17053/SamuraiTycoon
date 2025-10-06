@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Tax Collection
   description: Collect taxes from your domain for massive income
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: e3a3f6e5da08f46c895f632eccceb676, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Collect Taxes

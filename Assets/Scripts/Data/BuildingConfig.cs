@@ -28,6 +28,8 @@ public class BuildingConfig : ScriptableObject
     [Tooltip("Maximum number of modules this building can have")]
     public int maxModuleSlots = 3;
 
+    public Sprite Banner;
+
     // Helper methods
     public double GetCost(int level) => BaseCost * Mathf.Pow(CostMultiplier, level);
     public double GetIncome(int level) => BaseIncome * Mathf.Pow(IncomeMultiplier, level);

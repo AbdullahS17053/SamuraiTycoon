@@ -19,7 +19,7 @@ MonoBehaviour:
   CostMultiplier: 1.25
   BaseIncome: 50
   IncomeMultiplier: 1.2
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: f1459a23d146a3e42b2096ee5cd3d3a4, type: 3}
   Prefab: {fileID: 0}
   ThemeColor: {r: 0.5019608, g: 0, b: 0.5019608, a: 1}
   modules:
@@ -28,3 +28,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f4dc3bb119f21b247bd4ad3c8df2dd31, type: 2}
   - {fileID: 11400000, guid: 36fe0cfc7ac91ff4eba8f8213635ea50, type: 2}
   maxModuleSlots: 4
+  Banner: {fileID: 21300000, guid: be397a922d50bf841a3cd5ab72a93655, type: 3}

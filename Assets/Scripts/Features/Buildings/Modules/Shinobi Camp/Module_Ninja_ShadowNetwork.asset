@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Shadow Network
   description: Expand your network of ninja operatives
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: bb6a5e7c322e5714791e7b711fa7c1f9, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Expand Network

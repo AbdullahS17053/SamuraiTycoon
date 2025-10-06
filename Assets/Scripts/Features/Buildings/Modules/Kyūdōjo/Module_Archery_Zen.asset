@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Zen Archery
   description: "Master the meditative art of Ky\u016Bd\u014D for precise income"
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: e3a3f6e5da08f46c895f632eccceb676, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Practice Zen

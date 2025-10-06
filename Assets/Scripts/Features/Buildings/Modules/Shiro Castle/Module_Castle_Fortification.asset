@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Fortification
   description: Strengthen castle defenses and training efficiency
-  icon: {fileID: 0}
+  icon: {fileID: -186861360, guid: 7ab583afe5c40c6409c96bb8aefc68a0, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Build Defenses

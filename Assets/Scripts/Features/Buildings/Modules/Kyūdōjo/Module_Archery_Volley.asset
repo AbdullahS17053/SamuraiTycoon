@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Rapid Volley
   description: Train archers to fire multiple arrows quickly
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 9aef39e094f54184eba2cad6a87d65fe, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Train Volley

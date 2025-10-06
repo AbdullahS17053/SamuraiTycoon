@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Bushido Code
   description: Teach the way of the warrior for increased honor and gold
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: e3a3f6e5da08f46c895f632eccceb676, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Train Bushido
   buttonColor: {r: 1, g: 1, b: 1, a: 1}
-  maxLevel: 8
+  maxLevel: 100
   showMaxLevelWarning: 1
   activationCost: 150
   costMultiplier: 1.3

@@ -48,6 +48,8 @@ public class CapacityModule : BuildingModule
         {
             if (currentWorkers < GetMaxCapacity(building))
             {
+
+                BuildingPanelUI3D.Instance.updateSlider();
                 currentWorkers++;
                 runtimeData.timesActivated++;
 

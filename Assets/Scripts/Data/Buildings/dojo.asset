@@ -27,3 +27,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 61b1d9a61b2b74b4bb7a2f10f3900e6e, type: 2}
   - {fileID: 11400000, guid: b756b6bb1fc1880458fde2a2bcfdf4c6, type: 2}
   maxModuleSlots: 3
+  Banner: {fileID: 21300000, guid: 843eb996d23b7734585f1fdbea293a7a, type: 3}

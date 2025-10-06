@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Daimyo's Court
   description: Expand your court to manage more samurai lords
-  icon: {fileID: 0}
+  icon: {fileID: -963140487, guid: 60d93b9162dd7e24ea7f2e55353f1488, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Expand Court

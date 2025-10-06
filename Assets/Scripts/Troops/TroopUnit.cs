@@ -56,12 +56,15 @@ public class TroopUnit : MonoBehaviour
     private TroopManager troopManager;
 
     // Animation
-    public Animator animator;
+    [Header("Animation")]
+    public Animator animator; // Now public so you can assign from inspector
     private bool hasAnimator = false;
+    private TroopState previousState; // Track previous state for animation changes
 
     // Training animation
     private Coroutine trainingAnimationCoroutine;
     private Vector3 originalScale;
+    private bool hasTriggeredTrainingAnimation = false;
 
     // Debug tracking
     private string debugStatus = "Initialized";
@@ -69,15 +72,25 @@ public class TroopUnit : MonoBehaviour
     void Awake()
     {
         navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
-        animator = GetComponent<Animator>();
+
+        // If animator is not assigned in inspector, try to get it
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+        }
+
         hasAnimator = animator != null;
 
         originalScale = transform.localScale;
-        DisableVisualElements();
+        previousState = currentState;
 
         if (!hasAnimator)
         {
             Debug.LogWarning($"⚠️ {gameObject.name}: No Animator component found. Animation states will not work.");
+        }
+        else
+        {
+            Debug.Log($"✅ {gameObject.name}: Animator found and ready");
         }
     }
 
@@ -96,23 +109,19 @@ public class TroopUnit : MonoBehaviour
         Debug.Log($"⚔️ {troopName} initialized with {currentPower} power");
 
         // Set initial animation state
-        UpdateAnimationState();
-    }
-
-    void DisableVisualElements()
-    {
-
-        Collider collider = GetComponent<Collider>();
-        if (collider != null)
-        {
-            collider.enabled = true;
-        }
+        UpdateAnimationState(true); // Force initial state
     }
 
     void Update()
     {
         UpdateState();
-        UpdateAnimationState();
+
+        // Only update animation if state changed
+        if (currentState != previousState)
+        {
+            UpdateAnimationState(false);
+            previousState = currentState;
+        }
     }
 
     void UpdateState()
@@ -137,28 +146,37 @@ public class TroopUnit : MonoBehaviour
         }
     }
 
-    void UpdateAnimationState()
+    void UpdateAnimationState(bool forceUpdate = false)
     {
         if (!hasAnimator) return;
 
         try
         {
-            // Update walking animation based on movement
-            bool isMoving = currentState == TroopState.MovingToBuilding ||
-                           currentState == TroopState.MovingToCastle ||
-                           currentState == TroopState.MovingToWar;
+            // Only update if state changed or forced
+            if (!forceUpdate && currentState == previousState) return;
 
-            animator.SetBool("Walking", isMoving);
+            debugStatus += $", Anim: {currentState}";
 
-            // Handle training animation
-            if (currentState == TroopState.Training)
+            switch (currentState)
             {
-                animator.SetTrigger("Train");
-            }
-            else if (currentState == TroopState.Idle || currentState == TroopState.InCastle)
-            {
-                // Reset any training animation
-                animator.ResetTrigger("Train");
+                case TroopState.Idle:
+                    SetIdleAnimation();
+                    break;
+
+                case TroopState.MovingToBuilding:
+                case TroopState.MovingToCastle:
+                case TroopState.MovingToWar:
+                    SetWalkingAnimation();
+                    break;
+
+                case TroopState.Training:
+                    SetTrainingAnimation();
+                    break;
+
+                case TroopState.InCastle:
+                case TroopState.InBattle:
+                    SetInactiveAnimation();
+                    break;
             }
         }
         catch (System.Exception e)
@@ -167,12 +185,52 @@ public class TroopUnit : MonoBehaviour
         }
     }
 
+    void SetIdleAnimation()
+    {
+        if (!hasAnimator && animator.GetBool("Walking")) return;
+        animator.SetBool("Walking", false);
+        Debug.Log($"🛑 {troopName}: Setting Idle animation");
+    }
+
+    void SetWalkingAnimation()
+    {
+        if (!hasAnimator && !animator.GetBool("Walking")) return;
+        animator.SetBool("Walking", true);
+        animator.ResetTrigger("Train");
+        hasTriggeredTrainingAnimation = false;
+        Debug.Log($"🚶 {troopName}: Setting Walking animation");
+    }
+
+    void SetTrainingAnimation()
+    {
+        if (!hasAnimator) return;
+        animator.SetBool("Walking", false);
+
+        // Only trigger training animation once per training session
+        if (!hasTriggeredTrainingAnimation)
+        {
+            animator.SetTrigger("Train");
+            hasTriggeredTrainingAnimation = true;
+            Debug.Log($"🏋️ {troopName}: Setting Training animation");
+        }
+    }
+
+    void SetInactiveAnimation()
+    {
+        if (!hasAnimator) return;
+        animator.SetBool("Walking", false);
+        animator.ResetTrigger("Train");
+        hasTriggeredTrainingAnimation = false;
+        Debug.Log($"💤 {troopName}: Setting Inactive animation");
+    }
+
     public void StartTrainingProgression()
     {
         currentState = TroopState.Idle;
         currentBuildingIndex = 0;
+        hasTriggeredTrainingAnimation = false;
         debugStatus = "Starting training progression";
-        UpdateAnimationState();
+        UpdateAnimationState(true);
         FindNextTrainingBuilding();
     }
 
@@ -184,14 +242,12 @@ public class TroopUnit : MonoBehaviour
             return;
         }
 
-        // Get ALL available training buildings in order
         List<TrainingBuilding> availableBuildings = troopManager.GetAllTrainingBuildingsInOrder();
 
         Debug.Log($"🔍 {troopName}: Looking for building {currentBuildingIndex + 1} of {availableBuildings.Count} total buildings");
 
         if (currentBuildingIndex >= availableBuildings.Count)
         {
-            // All buildings completed, go to castle
             debugStatus = $"All {availableBuildings.Count} buildings completed, moving to castle";
             Debug.Log($"🎯 {troopName}: Completed all {availableBuildings.Count} buildings, going to castle");
             MoveToCastle();
@@ -216,17 +272,15 @@ public class TroopUnit : MonoBehaviour
                 }
                 else
                 {
-                    // Building not available, wait and try again
                     debugStatus = $"Building {currentBuildingIndex + 1} not available, waiting...";
                     Debug.Log($"⏳ {troopName}: Building {currentBuildingIndex + 1} not available (CanTrain: {canTrain}, CanAccept: {canAccept}, Unlocked: {isUnlocked}). Retrying in 2s");
                     currentState = TroopState.Idle;
-                    UpdateAnimationState();
+                    UpdateAnimationState(true);
                     Invoke("FindNextTrainingBuilding", 2f);
                 }
             }
             else
             {
-                // Building is null, skip to next
                 debugStatus = $"Building {currentBuildingIndex + 1} is null, skipping";
                 Debug.LogWarning($"⚠️ {troopName}: Building {currentBuildingIndex + 1} is null, skipping to next");
                 currentBuildingIndex++;
@@ -249,8 +303,6 @@ public class TroopUnit : MonoBehaviour
         {
             Debug.LogError($"❌ {troopName}: NavAgent is null, cannot move to building");
         }
-
-        UpdateAnimationState();
     }
 
     void StartTraining()
@@ -275,8 +327,6 @@ public class TroopUnit : MonoBehaviour
             currentBuildingIndex++;
             FindNextTrainingBuilding();
         }
-
-        UpdateAnimationState();
     }
 
     void StartTrainingAnimation()
@@ -289,7 +339,6 @@ public class TroopUnit : MonoBehaviour
 
     IEnumerator TrainingAnimationRoutine()
     {
-        // Start building animation if available
         Animator buildingAnimator = currentTrainingBuilding != null ? currentTrainingBuilding.GetComponent<Animator>() : null;
         bool hasBuildingAnimation = buildingAnimator != null && buildingAnimator.runtimeAnimatorController != null;
 
@@ -298,41 +347,16 @@ public class TroopUnit : MonoBehaviour
             buildingAnimator.SetBool("IsTraining", true);
         }
 
-        // Start troop training animation
-        UpdateAnimationState();
-
-        // Fallback: scale up/down animation if no building animation
-        if (!hasBuildingAnimation)
+        // Wait for training to complete
+        while (currentState == TroopState.Training)
         {
-            while (currentState == TroopState.Training)
-            {
-                float scaleTime = 0.5f;
-                float timer = 0f;
-                while (timer < scaleTime && currentState == TroopState.Training)
-                {
-                    timer += Time.deltaTime;
-                    float scale = Mathf.Lerp(1f, 1.3f, timer / scaleTime);
-                    transform.localScale = originalScale * scale;
-                    yield return null;
-                }
-
-                timer = 0f;
-                while (timer < scaleTime && currentState == TroopState.Training)
-                {
-                    timer += Time.deltaTime;
-                    float scale = Mathf.Lerp(1.3f, 1f, timer / scaleTime);
-                    transform.localScale = originalScale * scale;
-                    yield return null;
-                }
-            }
+            yield return null;
         }
-        else
+
+        // Clean up building animation
+        if (hasBuildingAnimation && buildingAnimator != null)
         {
-            // Just wait while building animation plays
-            while (currentState == TroopState.Training)
-            {
-                yield return null;
-            }
+            buildingAnimator.SetBool("IsTraining", false);
         }
     }
 
@@ -346,7 +370,6 @@ public class TroopUnit : MonoBehaviour
 
         transform.localScale = originalScale;
 
-        // Stop building animation
         if (currentTrainingBuilding != null)
         {
             Animator buildingAnimator = currentTrainingBuilding.GetComponent<Animator>();
@@ -395,8 +418,6 @@ public class TroopUnit : MonoBehaviour
         currentBuildingIndex++;
         debugStatus = $"Moving to next building: {currentBuildingIndex + 1}";
         FindNextTrainingBuilding();
-
-        UpdateAnimationState();
     }
 
     float CalculatePowerIncrease()
@@ -428,12 +449,9 @@ public class TroopUnit : MonoBehaviour
         else
         {
             Debug.LogError($"❌ {troopName}: NavAgent is null, cannot move to castle");
-            // Fallback: teleport to castle
             transform.position = castlePosition;
             EnterCastle();
         }
-
-        UpdateAnimationState();
     }
 
     void EnterCastle()
@@ -444,8 +462,7 @@ public class TroopUnit : MonoBehaviour
         // Stop all animations
         if (hasAnimator)
         {
-            animator.SetBool("Walking", false);
-            animator.ResetTrigger("Train");
+            SetInactiveAnimation();
         }
 
         // Hide the troop completely
@@ -479,7 +496,6 @@ public class TroopUnit : MonoBehaviour
         {
             navAgent.SetDestination(battlePosition);
         }
-        UpdateAnimationState();
     }
 
     public bool IsReadyForBattle()
@@ -504,7 +520,6 @@ public class TroopUnit : MonoBehaviour
 
     public void SetSelected(bool selected)
     {
-        // Selection logic if needed
         if (hasAnimator)
         {
             animator.SetBool("Selected", selected);
@@ -520,6 +535,7 @@ public class TroopUnit : MonoBehaviour
         {
             StopTrainingAnimation();
             currentState = TroopState.Idle;
+            UpdateAnimationState(true);
         }
 
         if (currentTrainingBuilding != null)
@@ -527,8 +543,6 @@ public class TroopUnit : MonoBehaviour
             currentTrainingBuilding.ReleaseTroop();
             currentTrainingBuilding = null;
         }
-
-        UpdateAnimationState();
     }
 
     // Debug method to check current status
@@ -540,7 +554,7 @@ public class TroopUnit : MonoBehaviour
     // Animation helper method
     public void ForceAnimationUpdate()
     {
-        UpdateAnimationState();
+        UpdateAnimationState(true);
     }
 
     void OnDestroy()

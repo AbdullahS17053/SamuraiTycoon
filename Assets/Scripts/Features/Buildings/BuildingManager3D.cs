@@ -267,6 +267,8 @@ public class BuildingManager3D : MonoBehaviour
             int oldLevel = buildingData.Level;
             buildingData.Level++;
 
+            Debug.LogError("Upgraded");
+
             if (buildingData.Level == 1)
                 buildingData.IsUnlocked = true;
 

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moduleName: Assassination Training
   description: Train ninjas in quick, silent elimination techniques
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 75348a4dd7be1134da44aa6696c1bdf7, type: 3}
   isActive: 1
   showInUI: 1
   buttonText: Train Assassins

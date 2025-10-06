@@ -43,7 +43,7 @@ public class EconomyManager
         _tickTimer += deltaTime;
         if (_tickTimer >= TICK_INTERVAL)
         {
-            CalculatePassiveIncome();
+            //+ CalculatePassiveIncome();
             _tickTimer = 0f;
         }
     }
