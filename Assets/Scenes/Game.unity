@@ -11894,7 +11894,7 @@ MonoBehaviour:
     peasantsText: {fileID: 1576213385}
   Save:
     resetSaveOnStart: 1
-    startingGold: 10000
+    startingGold: 1000
   Zone: {fileID: 1733198369}
   Troops: {fileID: 9964488}
   Prestige: {fileID: 349022941}
@@ -11903,6 +11903,7 @@ MonoBehaviour:
   enableWeb3Features: 0
   enableJapaneseTheme: 0
   enableTroopSystem: 1
+  passiveIncomeActive: 0
 --- !u!114 &1256733586
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -21,6 +21,7 @@ public class GameManager : MonoBehaviour
     public bool enableWeb3Features = false;
     public bool enableJapaneseTheme = true;
     public bool enableTroopSystem = true;
+    public bool passiveIncomeActive = false;
 
     void Awake()
     {
@@ -109,7 +110,10 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         // Tick economy
-        Economy.Tick(Time.deltaTime);
+        if (passiveIncomeActive)
+        {
+            Economy.Tick(Time.deltaTime);
+        }
 
         // FIXED: Tick TroopManager if enabled
         if (Troops != null && enableTroopSystem)

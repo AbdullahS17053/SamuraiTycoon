@@ -1,6 +1,8 @@
-﻿using System;
+﻿
+using System;
 using System.IO;
 using UnityEngine;
+using System.Collections;
 
 [System.Serializable]
 public class SaveManager
@@ -9,18 +11,18 @@ public class SaveManager
 
     public GameData Data { get; private set; }
 
-    [Header("Debug Options - EXPAND ME!")]
+    [Header("Debug Options")]
     [Tooltip("Check this to delete save file and start fresh")]
     public bool resetSaveOnStart = false;
     [Tooltip("Starting gold when resetting (if resetSaveOnStart is true)")]
     public double startingGold = 0;
 
-    // Add this field - it won't be saved to the file
     [System.NonSerialized] private bool _hasResetBeenProcessed = false;
+    [System.NonSerialized] private bool _isSaving = false;
+    [System.NonSerialized] private Coroutine _delayedSaveCoroutine;
 
     public void Initialize()
     {
-        // Only reset once per game session
         if (resetSaveOnStart && !_hasResetBeenProcessed)
         {
             Debug.Log("🔄 ResetSaveOnStart is TRUE - deleting save file...");
@@ -34,7 +36,7 @@ public class SaveManager
         }
         else
         {
-            Debug.Log("ℹ️ Reset already processed this session, loading normal save...");
+            Debug.Log("💾 Reset already processed, loading normal save...");
             Data = LoadGame() ?? new GameData();
         }
 
@@ -45,29 +47,35 @@ public class SaveManager
             Debug.Log($"💰 Set starting gold to: {startingGold}");
         }
 
-        Debug.Log($"🎮 Game Data Status - Gold: {Data?.Gold ?? 0}, Reset Flag: {resetSaveOnStart}");
+        Debug.Log($"💾 Game Data Status - Gold: {Data?.Gold ?? 0}, Buildings: {Data?.Buildings?.Count ?? 0}");
     }
 
     public void SaveGame()
     {
-        if (Data == null)
+        if (Data == null || _isSaving)
         {
-            Debug.LogError("❌ Cannot save - Data is null!");
+            Debug.LogWarning("💾 Save skipped - Data is null or save in progress");
             return;
         }
 
-        Data.LastSaveTime = DateTime.Now;
+        _isSaving = true;
 
         try
         {
+            Data.LastSaveTime = DateTime.Now;
+
             string json = JsonUtility.ToJson(Data, true);
             File.WriteAllText(SavePath, json);
-            Debug.Log($"💾 Game saved successfully to: {SavePath}");
-            Debug.Log($"📊 Save stats - Gold: {Data.Gold}, Buildings: {Data.Buildings.Count}");
+
+            Debug.Log($"💾 Game saved successfully! Gold: {Data.Gold}, Buildings: {Data.Buildings.Count}");
         }
         catch (Exception e)
         {
             Debug.LogError($"❌ Save failed: {e.Message}");
+        }
+        finally
+        {
+            _isSaving = false;
         }
     }
 
@@ -211,5 +219,28 @@ public class SaveManager
     {
         _hasResetBeenProcessed = false;
         Debug.Log("🔄 Reset flag cleared - next initialization will process reset if enabled");
+    }
+    public void DelayedSave(float delaySeconds = 2f)
+    {
+        if (GameManager.Instance != null && GameManager.Instance.isActiveAndEnabled)
+        {
+            if (_delayedSaveCoroutine != null)
+            {
+                GameManager.Instance.StopCoroutine(_delayedSaveCoroutine);
+            }
+
+            _delayedSaveCoroutine = GameManager.Instance.StartCoroutine(DelayedSaveRoutine(delaySeconds));
+        }
+        else
+        {
+            // Fallback to immediate save
+            SaveGame();
+        }
+    }
+    private IEnumerator DelayedSaveRoutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SaveGame();
+        _delayedSaveCoroutine = null;
     }
 }

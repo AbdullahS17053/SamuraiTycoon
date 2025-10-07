@@ -22,18 +22,22 @@ public class EconomyManager
     private const float TICK_INTERVAL = 1.0f;
     private bool _isInitialized = false;
 
+    // Passive income tracking
+    private double _lastPassiveIncome = 0;
+    private float _passiveIncomeTimer = 0f;
+
     public void Initialize(GameData data)
     {
         _data = data;
         _isInitialized = true;
         UpdateDebugView();
-        Debug.Log("✅ EconomyManager initialized with starting gold: " + _data.Gold);
+        Debug.Log($"💰 EconomyManager initialized with starting gold: {_data.Gold}");
     }
 
     public void SetBuildingManager(BuildingManager3D buildingManager)
     {
         _buildingManager = buildingManager;
-        Debug.Log("🔗 BuildingManager3D linked to EconomyManager");
+        Debug.Log("💰 BuildingManager3D linked to EconomyManager");
     }
 
     public void Tick(float deltaTime)
@@ -41,25 +45,33 @@ public class EconomyManager
         if (!_isInitialized || _buildingManager == null) return;
 
         _tickTimer += deltaTime;
+        _passiveIncomeTimer += deltaTime;
+
+        // Calculate passive income every second
         if (_tickTimer >= TICK_INTERVAL)
         {
-            //+ CalculatePassiveIncome();
+            CalculatePassiveIncome();
             _tickTimer = 0f;
+        }
+
+        // Update debug view less frequently for performance
+        if (_passiveIncomeTimer >= 5f) // Every 5 seconds
+        {
+            UpdateDebugView();
+            _passiveIncomeTimer = 0f;
         }
     }
 
     private void CalculatePassiveIncome()
     {
-        if (_buildingManager == null)
-        {
-            return;
-        }
+        if (_buildingManager == null) return;
 
         double income = _buildingManager.GetTotalIncomePerSecond();
 
         if (income > 0)
         {
             AddGold(income);
+            _lastPassiveIncome = income;
         }
     }
 
@@ -71,8 +83,14 @@ public class EconomyManager
         _data.Gold += amount;
         UpdateDebugView();
 
-        //+ Debug.Log($"💰 Gold: {oldGold} → {_data.Gold} (+{amount})");
+        Debug.Log($"💰 Gold: {oldGold} → {_data.Gold} (+{amount})");
         OnGoldChanged?.Invoke(amount);
+
+        // Auto-save on significant gold changes
+        if (amount >= 1000)
+        {
+            TriggerAutoSave();
+        }
     }
 
     public bool SpendGold(double amount)
@@ -85,7 +103,7 @@ public class EconomyManager
             _data.Gold -= amount;
             UpdateDebugView();
 
-            Debug.Log($"💸 Gold: {oldGold} → {_data.Gold} (-{amount})");
+            Debug.Log($"💰 Gold: {oldGold} → {_data.Gold} (-{amount})");
             OnGoldChanged?.Invoke(-amount);
             return true;
         }
@@ -102,8 +120,11 @@ public class EconomyManager
         _data.Honor += amount;
         UpdateDebugView();
 
-        Debug.Log($"🎖️ Honor: {oldHonor} → {_data.Honor} (+{amount})");
+        Debug.Log($"🟢 Honor: {oldHonor} → {_data.Honor} (+{amount})");
         OnHonorChanged?.Invoke(amount);
+
+        // Auto-save on honor changes
+        TriggerAutoSave();
     }
 
     private void UpdateDebugView()
@@ -116,6 +137,15 @@ public class EconomyManager
         Peasants = _data.Peasants;
     }
 
+    private void TriggerAutoSave()
+    {
+        if (GameManager.Instance != null && GameManager.Instance.Save != null)
+        {
+            // Use a small delay to avoid multiple rapid saves
+            GameManager.Instance.Save.DelayedSave(1f);
+        }
+    }
+
     // Helper methods for other systems
     public bool CanAfford(double amount)
     {
@@ -125,5 +155,35 @@ public class EconomyManager
     public double GetCurrentGold()
     {
         return _isInitialized ? _data.Gold : 0;
+    }
+
+    public double GetCurrentHonor()
+    {
+        return _isInitialized ? _data.Honor : 0;
+    }
+
+    public double GetPassiveIncomePerSecond()
+    {
+        return _lastPassiveIncome;
+    }
+
+    // Method to force immediate debug view update
+    public void ForceDebugUpdate()
+    {
+        UpdateDebugView();
+    }
+
+    [ContextMenu("Add Test Gold")]
+    public void AddTestGold()
+    {
+        AddGold(1000);
+        Debug.Log($"💰 Added test gold. Total: {_data.Gold}");
+    }
+
+    [ContextMenu("Add Test Honor")]
+    public void AddTestHonor()
+    {
+        AddHonor(100);
+        Debug.Log($"🟢 Added test honor. Total: {_data.Honor}");
     }
 }

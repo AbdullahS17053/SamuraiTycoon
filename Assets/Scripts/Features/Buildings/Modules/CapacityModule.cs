@@ -20,59 +20,74 @@ public class CapacityModule : BuildingModule
     {
         SetRuntimeData(data);
         if (runtimeData.level == 0) runtimeData.level = 1;
-        Debug.Log($"👥 CapacityModule initialized - Level: {runtimeData.level}/{maxLevel}");
+
+        // Ensure current workers don't exceed capacity
+        if (currentWorkers > GetMaxCapacity(null))
+        {
+            currentWorkers = GetMaxCapacity(null);
+        }
+
+        Debug.Log($"🔧 CapacityModule initialized - Level: {runtimeData.level}/{maxLevel}, Workers: {currentWorkers}");
     }
 
     public override void OnBuildingTick(Building building, double deltaTime)
     {
         // Capacity affects income calculation in other modules
+        // No active ticking needed for capacity
     }
 
     public override void OnUpgrade(Building building, int oldLevel, int newLevel)
     {
-        Debug.Log($"🏗️ Capacity increased to {GetMaxCapacity(building)}");
+        Debug.Log($"🔧 Capacity increased to {GetMaxCapacity(building)}");
+        TriggerProgress(building.Data.ID);
     }
 
     public override void OnButtonClick(Building building)
     {
         if (IsMaxLevel())
         {
-            Debug.Log($"🎯 {moduleName} is already at maximum level!");
+            Debug.Log($"🔧 {moduleName} is already at maximum level!");
             return;
         }
 
-        // Hire a worker
         double cost = GetHireCost();
-        if (GameManager.Instance != null && GameManager.Instance.Economy != null &&
-            GameManager.Instance.Economy.SpendGold(cost))
+
+        if (SpendGoldForActivation(cost, $"hiring worker for {building.Config.DisplayName}"))
         {
             if (currentWorkers < GetMaxCapacity(building))
             {
-
-                BuildingPanelUI3D.Instance.updateSlider();
                 currentWorkers++;
                 runtimeData.timesActivated++;
+                runtimeData.level = currentWorkers;
 
-                // Check if we reached max level (all worker slots filled)
+                // Update UI through events
+                if (BuildingPanelUI3D.Instance != null)
+                {
+                    BuildingPanelUI3D.Instance.UpdateLevelSlider();
+                    BuildingPanelUI3D.Instance.UpdateAllUI();
+                }
+
+                Debug.Log($"🔧 Hired worker for {building.Config.DisplayName}. Total: {currentWorkers}/{GetMaxCapacity(building)}");
+                TriggerProgress(building.Data.ID);
+
+                // Check if we reached max capacity
                 if (currentWorkers >= GetMaxCapacity(building))
                 {
                     runtimeData.level = maxLevel;
-                    Debug.Log($"🎉 {moduleName} reached maximum capacity!");
+                    Debug.Log($"🔧 {moduleName} reached maximum capacity!");
                     TriggerCompleted(building.Data.ID);
                 }
-                else
-                {
-                    runtimeData.level = currentWorkers;
-                }
-
-                Debug.Log($"👨‍🌾 Hired worker for {building.Config.DisplayName}. Total: {currentWorkers}/{GetMaxCapacity(building)}");
-                TriggerProgress(building.Data.ID);
             }
             else
             {
-                Debug.Log($"❌ Maximum capacity reached for {building.Config.DisplayName}");
-                GameManager.Instance.Economy.AddGold(cost); // Refund
+                Debug.Log($"🔧 Maximum capacity reached for {building.Config.DisplayName}");
+                // Refund since we can't hire
+                GameManager.Instance.Economy.AddGold(cost);
             }
+        }
+        else
+        {
+            Debug.Log($"❌ Not enough gold to hire worker. Need: {cost}");
         }
     }
 
@@ -96,7 +111,8 @@ public class CapacityModule : BuildingModule
 
     public int GetMaxCapacity(Building building)
     {
-        return Mathf.Min(baseCapacity + (building.Data.Level * capacityPerLevel), maxCapacity);
+        int calculatedCapacity = baseCapacity + (building?.Data.Level ?? 1) * capacityPerLevel;
+        return Mathf.Min(calculatedCapacity, maxCapacity);
     }
 
     private double GetHireCost()
@@ -124,5 +140,11 @@ public class CapacityModule : BuildingModule
     public override bool IsMaxLevel()
     {
         return currentWorkers >= maxCapacity || base.IsMaxLevel();
+    }
+
+    public float GetEfficiencyPercentage(Building building)
+    {
+        if (GetMaxCapacity(building) == 0) return 0f;
+        return (float)currentWorkers / GetMaxCapacity(building);
     }
 }

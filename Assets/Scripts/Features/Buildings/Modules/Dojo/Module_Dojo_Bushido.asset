@@ -23,7 +23,7 @@ MonoBehaviour:
   showMaxLevelWarning: 1
   activationCost: 150
   costMultiplier: 1.3
-  baseIncomeBonus: 3
+  baseIncomeBonus: 1
   incomeMultiplier: 1.15
   incomeInterval: 1
   effectDescription: Increases gold generation through warrior discipline

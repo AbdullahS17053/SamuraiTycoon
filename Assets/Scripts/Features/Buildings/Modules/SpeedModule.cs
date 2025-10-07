@@ -38,7 +38,12 @@ public class SpeedModule : BuildingModule
         if (GameManager.Instance != null && GameManager.Instance.Economy != null &&
             GameManager.Instance.Economy.SpendGold(cost))
         {
-            BuildingPanelUI3D.Instance.updateSlider();
+            // Update UI
+            if (BuildingPanelUI3D.Instance != null)
+            {
+                BuildingPanelUI3D.Instance.UpdateLevelSlider();
+                BuildingPanelUI3D.Instance.UpdateAllUI();
+            }
 
             runtimeData.timesActivated++;
             runtimeData.level++;

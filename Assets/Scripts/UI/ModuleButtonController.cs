@@ -17,7 +17,12 @@ public class ModuleButtonController : MonoBehaviour
     private Building _currentBuilding;
     private EconomyManager _currentEconomy;
 
-    void Awake()
+    private void Awake()
+    {
+        AutoAssignReferences();
+    }
+
+    private void AutoAssignReferences()
     {
         // Auto-assign with better fallbacks
         if (button == null) button = GetComponentInChildren<Button>();
@@ -26,6 +31,7 @@ public class ModuleButtonController : MonoBehaviour
         if (costText == null) costText = FindTextComponent("cost", "price", "value");
         if (levelText == null) levelText = FindTextComponent("level", "lvl", "count");
         if (backgroundImage == null) backgroundImage = GetComponent<Image>() ?? GetComponentInChildren<Image>();
+        if (iconImage == null) iconImage = transform.Find("Icon")?.GetComponent<Image>() ?? GetComponentInChildren<Image>();
     }
 
     private TextMeshProUGUI FindTextComponent(params string[] possibleNames)
@@ -69,11 +75,19 @@ public class ModuleButtonController : MonoBehaviour
 
     private void OnButtonClicked()
     {
-        if (_currentModule != null && _currentBuilding != null)
+        if (_currentModule != null && _currentBuilding != null && BuildingManager3D.Instance != null)
         {
             _currentModule.OnButtonClick(_currentBuilding);
-            UpdateUI(); // Immediate feedback
+
+            // Update UI immediately for better feedback
+            StartCoroutine(DelayedUIUpdate());
         }
+    }
+
+    private System.Collections.IEnumerator DelayedUIUpdate()
+    {
+        yield return new WaitForEndOfFrame();
+        UpdateUI();
     }
 
     public void UpdateUI()
@@ -81,12 +95,10 @@ public class ModuleButtonController : MonoBehaviour
         if (_currentModule == null || _currentBuilding == null || _currentEconomy == null) return;
 
         // Update title
-        if (titleText != null)
-            titleText.text = _currentModule.buttonText;
+        SafeSetText(titleText, _currentModule.buttonText);
 
         // Update description
-        if (descriptionText != null)
-            descriptionText.text = _currentModule.GetEffectDescription();
+        SafeSetText(descriptionText, _currentModule.GetEffectDescription());
 
         // Update cost and level
         if (costText != null)
@@ -101,14 +113,14 @@ public class ModuleButtonController : MonoBehaviour
             levelText.text = $"Level: {_currentModule.GetCurrentLevel()}/{_currentModule.maxLevel}";
         }
 
-        // Update colors with smooth transitions
+        // Update colors
         if (backgroundImage != null)
         {
             Color targetColor = _currentModule.IsMaxLevel() ?
                 Color.yellow :
                 (_currentModule.buttonColor != Color.clear ? _currentModule.buttonColor : Color.white);
 
-            backgroundImage.color = Color.Lerp(backgroundImage.color, targetColor, Time.deltaTime * 10f);
+            backgroundImage.color = targetColor; // Immediate color change
         }
 
         // Update icon
@@ -118,32 +130,31 @@ public class ModuleButtonController : MonoBehaviour
             iconImage.color = _currentModule.IsMaxLevel() ? new Color(1, 1, 1, 0.7f) : Color.white;
         }
 
-        // Update button interactability with smooth transition
+        // Update button interactability
         if (button != null)
         {
             bool shouldBeInteractable = !_currentModule.IsMaxLevel() &&
-                                      _currentModule.CanActivate(_currentBuilding, _currentEconomy.Gold);
+                _currentModule.CanActivate(_currentBuilding, _currentEconomy.Gold);
 
             button.interactable = shouldBeInteractable;
 
             // Visual feedback for affordable/not affordable
             if (!shouldBeInteractable && !_currentModule.IsMaxLevel())
             {
-                button.image.color = Color.Lerp(button.image.color, Color.gray, Time.deltaTime * 8f);
+                button.image.color = Color.gray;
             }
             else
             {
-                button.image.color = Color.Lerp(button.image.color, Color.white, Time.deltaTime * 8f);
+                button.image.color = Color.white;
             }
         }
     }
 
-    void Update()
+    private void SafeSetText(TextMeshProUGUI textField, string value)
     {
-        // Smooth continuous updates for affordability states
-        if (_currentModule != null && !_currentModule.IsMaxLevel())
+        if (textField != null)
         {
-            UpdateUI();
+            textField.text = value ?? string.Empty;
         }
     }
 
@@ -161,5 +172,14 @@ public class ModuleButtonController : MonoBehaviour
         }
 
         return num.ToString("F2") + suffixes[suffixIndex];
+    }
+
+    private void OnEnable()
+    {
+        // Refresh UI when enabled
+        if (_currentModule != null)
+        {
+            UpdateUI();
+        }
     }
 }

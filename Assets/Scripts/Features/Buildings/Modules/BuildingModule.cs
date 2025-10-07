@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 // Base class for all building modules
@@ -92,5 +92,22 @@ public abstract class BuildingModule : ScriptableObject
     public BuildingModuleData GetRuntimeData()
     {
         return runtimeData;
+    }
+
+    // Helper method for derived classes to check economy
+    protected bool SpendGoldForActivation(double cost, string actionName)
+    {
+        if (GameManager.Instance?.Economy?.SpendGold(cost) == true)
+        {
+            Debug.Log($"💰 Spent {cost} gold for {actionName}");
+            return true;
+        }
+        return false;
+    }
+
+    // Validation method
+    public virtual bool IsValid()
+    {
+        return !string.IsNullOrEmpty(moduleName) && maxLevel > 0;
     }
 }

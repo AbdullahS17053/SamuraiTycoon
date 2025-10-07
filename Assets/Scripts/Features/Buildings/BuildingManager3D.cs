@@ -36,6 +36,7 @@ public class BuildingManager3D : MonoBehaviour
     public System.Action<string> OnBuildingUpgraded;
     public System.Action<string, string> OnModuleActivated;
     public System.Action<string> OnBuildingSelected;
+    public System.Action<string> OnBuildingDataChanged; // NEW EVENT
 
     void Awake()
     {
@@ -181,9 +182,22 @@ public class BuildingManager3D : MonoBehaviour
                 mainCamera.transform.position = _originalCameraPosition;
                 mainCamera.transform.rotation = _originalCameraRotation;
             }
-
+            Destroy(buildingPanel.transform.GetChild(0).gameObject);
             _currentSelectedBuilding = "";
             Debug.Log("📊 3D Building panel hidden");
+        }
+    }
+    // ADD THIS METHOD to ensure UI updates when building data changes
+    public void ForceUIRefresh(string buildingId = null)
+    {
+        if (string.IsNullOrEmpty(buildingId))
+        {
+            buildingId = _currentSelectedBuilding;
+        }
+
+        if (!string.IsNullOrEmpty(buildingId) && buildingId == _currentSelectedBuilding)
+        {
+            UpdateBuildingPanel();
         }
     }
 
@@ -247,6 +261,7 @@ public class BuildingManager3D : MonoBehaviour
 
     // ========== BUILDING ACTIONS ==========
 
+    // IMPROVED UpgradeBuilding method
     public void UpgradeBuilding(string buildingId)
     {
         if (!_isInitialized || _economy == null) return;
@@ -267,8 +282,6 @@ public class BuildingManager3D : MonoBehaviour
             int oldLevel = buildingData.Level;
             buildingData.Level++;
 
-            Debug.LogError("Upgraded");
-
             if (buildingData.Level == 1)
                 buildingData.IsUnlocked = true;
 
@@ -276,17 +289,38 @@ public class BuildingManager3D : MonoBehaviour
             buildingInstance.OnUpgrade(oldLevel, buildingData.Level);
 
             Debug.Log($"⬆️ {buildingId} upgraded: Level {oldLevel} → {buildingData.Level}");
+
+            // TRIGGER UI UPDATE IMMEDIATELY
             OnBuildingUpgraded?.Invoke(buildingId);
 
-            // Refresh panel if this building is selected
+            // FORCE SLIDER UPDATE
             if (_currentSelectedBuilding == buildingId)
             {
+                // Clear and recreate the panel to ensure fresh data
                 UpdateBuildingPanel();
+
+                // Additional direct slider update
+                var panelUI = buildingPanelContent.GetComponentInChildren<BuildingPanelUI3D>();
+                if (panelUI != null)
+                {
+                    panelUI.UpdateLevelSlider();
+                    panelUI.UpdateAllUI();
+                }
             }
+
+            // Force save after upgrade
+            if (GameManager.Instance != null && GameManager.Instance.Save != null)
+            {
+                GameManager.Instance.Save.DelayedSave(0.5f);
+            }
+        }
+        else
+        {
+            Debug.Log($"❌ Not enough gold to upgrade {buildingId}. Need: {cost}, Have: {_economy.Gold}");
         }
     }
 
-    public void ActivateModule(string buildingId, string moduleName)
+     public void ActivateModule(string buildingId, string moduleName)
     {
         if (!_isInitialized) return;
 
@@ -299,16 +333,25 @@ public class BuildingManager3D : MonoBehaviour
                 {
                     module.OnButtonClick(building);
                     OnModuleActivated?.Invoke(buildingId, moduleName);
+                    OnBuildingDataChanged?.Invoke(buildingId); // NEW EVENT
 
                     // Refresh panel
                     if (_currentSelectedBuilding == buildingId)
                     {
                         UpdateBuildingPanel();
                     }
+
+                    // Force save after module activation
+                    if (GameManager.Instance != null && GameManager.Instance.Save != null)
+                    {
+                        GameManager.Instance.Save.SaveGame();
+                    }
+                    break;
                 }
             }
         }
     }
+
 
     // ========== PUBLIC ACCESS METHODS ==========
 
@@ -473,6 +516,13 @@ public class BuildingManager3D : MonoBehaviour
     public void RefreshUI()
     {
         if (!string.IsNullOrEmpty(_currentSelectedBuilding))
+        {
+            UpdateBuildingPanel();
+        }
+    }
+    public void RefreshBuildingUI(string buildingId)
+    {
+        if (_currentSelectedBuilding == buildingId)
         {
             UpdateBuildingPanel();
         }
