@@ -13,10 +13,11 @@ public class CapacityModule : BuildingModule
 
     public override void OnButtonClick(TrainingBuilding building)
     {
-        if (EconomyManager.Instance.SpendGold(GetCurrentCost(runtimeData.timesActivated)))
+        if (EconomyManager.Instance.SpendGold(GetCurrentCost()))
         {
             building.UpgradeCapcity();
             BuildingPanelUI3D.Instance.OnBuildingUpgraded(null);
+            level++;
         }
     }
 
@@ -26,7 +27,7 @@ public class CapacityModule : BuildingModule
     }
 
     // Override cost methods for capacity module
-    public override int GetCurrentCost(int timesActivated)
+    public override int GetCurrentCost()
     {
         throw new System.NotImplementedException();
     }

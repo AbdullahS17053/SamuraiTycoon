@@ -10,10 +10,11 @@ public class SpeedModule : BuildingModule
 
     public override void OnButtonClick(TrainingBuilding building)
     {
-        if (EconomyManager.Instance.SpendGold(GetCurrentCost(runtimeData.timesActivated)))
+        if (EconomyManager.Instance.SpendGold(GetCurrentCost()))
         {
             building.UpgradeEfficiency();
             BuildingPanelUI3D.Instance.OnBuildingUpgraded(null);
+            level++;
         }
     }
 

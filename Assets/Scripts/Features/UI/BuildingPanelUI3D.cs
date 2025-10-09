@@ -33,7 +33,6 @@ public class BuildingPanelUI3D : MonoBehaviour
 
     private TrainingBuilding currentBuilding;
     private List<GameObject> _moduleButtons = new List<GameObject>();
-    private bool buttonsCreated;
 
 
     private void Awake()
@@ -55,7 +54,13 @@ public class BuildingPanelUI3D : MonoBehaviour
         {
             building = currentBuilding;
         }
-        currentBuilding = building;
+        else
+        {
+            currentBuilding = building;
+            ClearModuleButtons();
+            CreateModuleButtons();
+        }
+
 
 
         buildingNameText.text = building.DisplayName;
@@ -78,22 +83,17 @@ public class BuildingPanelUI3D : MonoBehaviour
 
         incomeStatText.text = $"{building.BaseIncomePerTrained} Gold";
 
-        if (!buttonsCreated)
-        {
-            CreateModuleButtons();
-            buttonsCreated = true;
-        }
     }
 
     private void CreateModuleButtons()
     {
-        ClearModuleButtons();
 
-        foreach (var module in currentBuilding.modules)
+        foreach (BuildingModule module in currentBuilding.modules)
         {
             if (module != null && module.showInUI)
             {
-                var buttonObj = Instantiate(moduleButtonPrefab, moduleContainer);
+                GameObject buttonObj = Instantiate(moduleButtonPrefab, moduleContainer);
+                buttonObj.GetComponent<ModuleButtonController>()._currentModule = module; 
 
                 _moduleButtons.Add(buttonObj);
             }
@@ -108,6 +108,5 @@ public class BuildingPanelUI3D : MonoBehaviour
                 Destroy(button);
         }
         _moduleButtons.Clear();
-        buttonsCreated = false;
     }
 }

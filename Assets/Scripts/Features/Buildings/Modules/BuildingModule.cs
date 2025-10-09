@@ -16,6 +16,7 @@ public abstract class BuildingModule : ScriptableObject
     public Color buttonColor = Color.white;
 
     [Header("Upgrade Limits")]
+    public int level = 1;
     public int maxLevel = 10;
     public bool showMaxLevelWarning = true;
 
@@ -43,9 +44,9 @@ public abstract class BuildingModule : ScriptableObject
     protected void TriggerProgress(string buildingId) => OnModuleProgress?.Invoke(buildingId);
 
     // Cost calculation
-    public virtual int GetCurrentCost(int timesActivated)
+    public virtual int GetCurrentCost()
     {
-        return cost * Mathf.RoundToInt(Mathf.Pow(costMultiplier, timesActivated));
+        return Mathf.RoundToInt(cost * (costMultiplier * level));
     }
 
     // Get how many times this module has been activated
