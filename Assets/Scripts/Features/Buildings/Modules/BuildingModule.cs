@@ -20,8 +20,8 @@ public abstract class BuildingModule : ScriptableObject
     public bool showMaxLevelWarning = true;
 
     [Header("Cost Settings")]
-    public double activationCost = 100;
-    public float costMultiplier = 1.2f;
+    public int cost = 100;
+    public float costMultiplier = 1.1f;
 
     // Events for module lifecycle
     public event Action<string> OnModuleStarted;
@@ -33,11 +33,8 @@ public abstract class BuildingModule : ScriptableObject
     protected BuildingModuleData runtimeData;
 
     // Main methods that modules override
-    public abstract void Initialize(BuildingModuleData data);
-    public abstract void OnBuildingTick(Building building, double deltaTime);
-    public abstract void OnUpgrade(Building building, int oldLevel, int newLevel);
-    public abstract void OnButtonClick(Building building);
-    public abstract string GetStatusText(Building building);
+    public abstract void OnButtonClick(TrainingBuilding building);
+    public abstract string GetStatusText(TrainingBuilding building);
     public abstract string GetEffectDescription();
 
     // Helper methods
@@ -46,20 +43,13 @@ public abstract class BuildingModule : ScriptableObject
     protected void TriggerProgress(string buildingId) => OnModuleProgress?.Invoke(buildingId);
 
     // Cost calculation
-    public virtual double GetCurrentCost(int timesActivated)
+    public virtual int GetCurrentCost(int timesActivated)
     {
-        return activationCost * Mathf.Pow(costMultiplier, timesActivated);
-    }
-
-    // Can this module be activated?
-    public virtual bool CanActivate(Building building, double currentGold)
-    {
-        if (GameManager.Instance == null || GameManager.Instance.Economy == null) return false;
-        return !IsMaxLevel() && currentGold >= GetCurrentCost(GetActivationCount(building));
+        return cost * Mathf.RoundToInt(Mathf.Pow(costMultiplier, timesActivated));
     }
 
     // Get how many times this module has been activated
-    protected virtual int GetActivationCount(Building building)
+    protected virtual int GetActivationCount(TrainingBuilding building)
     {
         return runtimeData?.level ?? 0;
     }
@@ -95,7 +85,7 @@ public abstract class BuildingModule : ScriptableObject
     }
 
     // Helper method for derived classes to check economy
-    protected bool SpendGoldForActivation(double cost, string actionName)
+    protected bool SpendGoldForActivation(int cost, string actionName)
     {
         if (GameManager.Instance?.Economy?.SpendGold(cost) == true)
         {

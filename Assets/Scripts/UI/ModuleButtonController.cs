@@ -14,7 +14,7 @@ public class ModuleButtonController : MonoBehaviour
     public Image iconImage;
 
     private BuildingModule _currentModule;
-    private Building _currentBuilding;
+    private TrainingBuilding _currentBuilding;
     private EconomyManager _currentEconomy;
 
     private void Awake()
@@ -52,25 +52,6 @@ public class ModuleButtonController : MonoBehaviour
 
         // Return first text if no specific one found
         return allTexts[0];
-    }
-
-    public void Initialize(BuildingModule module, Building building, EconomyManager economy)
-    {
-        _currentModule = module;
-        _currentBuilding = building;
-        _currentEconomy = economy;
-
-        UpdateUI();
-
-        // Set up button click
-        if (button != null)
-        {
-            button.onClick.RemoveAllListeners();
-            if (!module.IsMaxLevel())
-            {
-                button.onClick.AddListener(OnButtonClicked);
-            }
-        }
     }
 
     private void OnButtonClicked()
@@ -130,24 +111,6 @@ public class ModuleButtonController : MonoBehaviour
             iconImage.color = _currentModule.IsMaxLevel() ? new Color(1, 1, 1, 0.7f) : Color.white;
         }
 
-        // Update button interactability
-        if (button != null)
-        {
-            bool shouldBeInteractable = !_currentModule.IsMaxLevel() &&
-                _currentModule.CanActivate(_currentBuilding, _currentEconomy.Gold);
-
-            button.interactable = shouldBeInteractable;
-
-            // Visual feedback for affordable/not affordable
-            if (!shouldBeInteractable && !_currentModule.IsMaxLevel())
-            {
-                button.image.color = Color.gray;
-            }
-            else
-            {
-                button.image.color = Color.white;
-            }
-        }
     }
 
     private void SafeSetText(TextMeshProUGUI textField, string value)

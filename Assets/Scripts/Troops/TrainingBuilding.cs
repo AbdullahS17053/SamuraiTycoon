@@ -1,193 +1,157 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 public class TrainingBuilding : MonoBehaviour
 {
+    [Header("Basic Info")]
+    public string ID;
+    public string DisplayName;
+    public bool locked;
+    [TextArea] public string Description;
+
+    [Header("Economics")]
+    public int BaseIncomePerTrained = 100;
+    public float IncomeMultiplier = 1.1f;
+    public int PowerAddToTroop = 1;
+    public float PowerIncrease = 1.1f;
+    public int currentWorkers = 1;
+    public int maxWorkers;
+
+    [Header("Visuals")]
+    public Sprite Icon;
+    public Sprite Banner;
+    public Color ThemeColor = Color.white;
+
+    [Header("Building Modules - DRAG MODULES HERE!")]
+    [Tooltip("Add modules to create upgrade buttons in the building panel")]
+    public List<BuildingModule> modules = new List<BuildingModule>();
+
     [Header("Building Configuration")]
-    public string displayName;
-    public string buildingId;
-    public int buildingOrder = 1; // Order in progression (1, 2, 3, etc.)
-    public bool isUnlocked = true; // Start with first building unlocked
-    public TroopUnit.TroopType[] trainableTroopTypes;
+    public int level = 1;
+    public int maxLevel = 100;
     public float baseTrainingTime = 30f;
-    public int trainingSlots = 1;
+    public float trainingTimerReducer = 1.1f;
 
     [Header("Current State")]
-    public TroopUnit currentTrainingTroop;
-    public bool isTraining = false;
     public List<TroopUnit> trainingQueue = new List<TroopUnit>();
+    public List<TroopUnit> waitingQueue = new List<TroopUnit>();
+    public Transform trainingArea;
+    public Transform waitingArea;
 
-    // Training progress tracking
-    private float trainingStartTime;
-    private float currentTrainingDuration;
-
-    void Start()
+    public bool castle;
+    public List<TroopUnit> troops = new List<TroopUnit>();
+    public void StoreTroops(TroopUnit troop)
     {
-        if (string.IsNullOrEmpty(buildingId))
-        {
-            buildingId = "building_" + GetInstanceID();
-        }
+        troops.Add(troop);
+        troop.RestNow();
     }
 
-    void Update()
+    public bool CanTrainTroop()
     {
-        UpdateTrainingProgress();
-    }
+        if (trainingQueue.Count >= currentWorkers) return false;
 
-    void UpdateTrainingProgress()
-    {
-        if (isTraining && currentTrainingTroop != null)
-        {
-            if (Time.time - trainingStartTime >= currentTrainingDuration)
-            {
-                CompleteCurrentTraining();
-            }
-        }
-
-        if (!isTraining && trainingQueue.Count > 0)
-        {
-            StartTraining(trainingQueue[0]);
-            trainingQueue.RemoveAt(0);
-        }
-    }
-
-    public bool CanTrainTroopType(TroopUnit.TroopType troopType)
-    {
-        if (trainableTroopTypes == null) return false;
-
-        foreach (var type in trainableTroopTypes)
-        {
-            if (type == troopType)
-                return true;
-        }
-        return false;
-    }
-
-    public bool CanAcceptTroop()
-    {
-        return isUnlocked && !isTraining && currentTrainingTroop == null;
+        return true;
     }
 
     public void AssignTroop(TroopUnit troop)
     {
-        if (troop != null)
+        if (castle)
         {
-            if (CanAcceptTroop())
+            StoreTroops(troop);
+            return;
+        }
+
+        if (!locked)
+        {
+            if (CanTrainTroop())
             {
                 StartTraining(troop);
+                trainingQueue.Add(troop);
             }
             else
             {
-                trainingQueue.Add(troop);
-                Debug.Log($"📋 {troop.troopName} added to queue at {displayName}");
+                waitingQueue.Add(troop);
             }
+        }
+        else
+        {
+            troop.SkipTraining();
         }
     }
 
     void StartTraining(TroopUnit troop)
     {
-        currentTrainingTroop = troop;
-        isTraining = true;
-        trainingStartTime = Time.time;
-        currentTrainingDuration = GetTrainingTimeForTroop(troop.troopType);
-
-        Debug.Log($"🏋️ Started training {troop.troopName} at {displayName} for {currentTrainingDuration} seconds");
+        StartCoroutine(troop.StartTraining(baseTrainingTime, BaseIncomePerTrained));
     }
 
-    void CompleteCurrentTraining()
+    public void CompleteCurrentTraining(TroopUnit troop)
     {
-        if (currentTrainingTroop != null)
+        for(int i = 0; i < trainingQueue.Count; i++)
         {
-            Debug.Log($"✅ Completed training {currentTrainingTroop.troopName} at {displayName}");
+            if(trainingQueue[i].troopId == troop.troopId)
+            {
+                trainingQueue.RemoveAt(i);
+
+                GameManager.Instance.AddGold(BaseIncomePerTrained);
+
+                if(waitingQueue.Count > 0)
+                {
+                    for(int e = 0; e < trainingQueue.Count; e++)
+                    {
+                        AssignTroop(waitingQueue[e]);
+                        waitingQueue.RemoveAt(e);
+
+                        break;
+                    }
+                }
+
+                break;
+            }
         }
-
-        ReleaseTroop();
     }
 
-    public void ReleaseTroop()
-    {
-        currentTrainingTroop = null;
-        isTraining = false;
-        trainingStartTime = 0;
-    }
-
-    public float GetTrainingTimeForTroop(TroopUnit.TroopType troopType)
-    {
-        return baseTrainingTime;
-    }
-
-    // UI methods
-    public int GetTrainingCount()
-    {
-        return isTraining ? 1 : 0;
-    }
-
-    public int GetQueueCount()
-    {
-        return trainingQueue.Count;
-    }
-
-    public float GetTrainingProgress()
-    {
-        if (!isTraining || currentTrainingDuration == 0) return 0f;
-
-        float elapsed = Time.time - trainingStartTime;
-        return Mathf.Clamp01(elapsed / currentTrainingDuration);
-    }
-
-    public string GetCurrentTroopName()
-    {
-        return currentTrainingTroop != null ? currentTrainingTroop.troopName : "None";
-    }
-
-    // Unlock methods
     public void UnlockBuilding()
     {
-        isUnlocked = true;
-        Debug.Log($"🔓 Building {displayName} unlocked!");
+        locked = false;
     }
 
-    public void LockBuilding()
+    public BuildingModule GetModule<T>(string moduleName)
     {
-        isUnlocked = false;
-        // Clear any current training
-        if (isTraining && currentTrainingTroop != null)
+        foreach (var module in modules)
         {
-            ReleaseTroop();
+            if (module.moduleName == moduleName)
+                return module;
         }
-        trainingQueue.Clear();
+        return null;
     }
-    /// <summary>
-    /// Clear training queue and release current troop
-    /// </summary>
-    public void ClearTraining()
+
+    public void UpgradeIncome()
     {
-        // Release current troop
-        if (currentTrainingTroop != null)
+        float baseIncome = BaseIncomePerTrained;
+
+        BaseIncomePerTrained = Mathf.RoundToInt(baseIncome *= IncomeMultiplier);
+    }
+
+    public void UpgradeEfficiency()
+    {
+        baseTrainingTime = Mathf.RoundToInt(baseTrainingTime /= IncomeMultiplier);
+    }
+
+    public void UpgradeCapcity()
+    {
+        currentWorkers++;
+
+        if (waitingQueue.Count > 0)
         {
-            currentTrainingTroop.CancelTraining();
-            ReleaseTroop();
-        }
+            for (int e = 0; e < trainingQueue.Count; e++)
+            {
+                AssignTroop(waitingQueue[e]);
+                waitingQueue.RemoveAt(e);
 
-        // Clear queue
-        trainingQueue.Clear();
-
-        Debug.Log($"🧹 Cleared training queue for {displayName}");
-    }
-
-    void OnDisable()
-    {
-        if (isTraining && currentTrainingTroop != null)
-        {
-            ReleaseTroop();
+                break;
+            }
         }
     }
 
-    [ContextMenu("Debug Building Info")]
-    public void DebugBuildingInfo()
-    {
-        Debug.Log($"🏢 {displayName} (Order: {buildingOrder}, Unlocked: {isUnlocked})");
-        Debug.Log($"- Training: {isTraining}, Queue: {trainingQueue.Count}");
-        Debug.Log($"- Current Troop: {GetCurrentTroopName()}");
-    }
 }
