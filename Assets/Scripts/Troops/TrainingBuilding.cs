@@ -38,13 +38,18 @@ public class TrainingBuilding : MonoBehaviour
     public List<TroopUnit> waitingQueue = new List<TroopUnit>();
     public Transform trainingArea;
     public Transform waitingArea;
+    public float queueSpacing = 1.5f;
+    public int maxWait = 5;
 
     public bool castle;
+    public bool gate;
     public List<TroopUnit> troops = new List<TroopUnit>();
     public void StoreTroops(TroopUnit troop)
     {
         troops.Add(troop);
         troop.RestNow();
+
+        WarManager.instance.AddTroop(Mathf.CeilToInt(troop.currentPower));
     }
 
     public bool CanTrainTroop()
@@ -72,6 +77,8 @@ public class TrainingBuilding : MonoBehaviour
             else
             {
                 waitingQueue.Add(troop);
+                troop.Stand();
+                UpdateWaitingQueuePositions();
             }
         }
         else
@@ -93,14 +100,16 @@ public class TrainingBuilding : MonoBehaviour
             {
                 trainingQueue.RemoveAt(i);
 
-                GameManager.Instance.AddGold(BaseIncomePerTrained);
+                EconomyManager.Instance.AddGold(BaseIncomePerTrained);
 
                 if(waitingQueue.Count > 0)
                 {
-                    for(int e = 0; e < trainingQueue.Count; e++)
+                    for(int e = 0; e < waitingQueue.Count; e++)
                     {
                         AssignTroop(waitingQueue[e]);
                         waitingQueue.RemoveAt(e);
+
+                        UpdateWaitingQueuePositions();
 
                         break;
                     }
@@ -108,6 +117,14 @@ public class TrainingBuilding : MonoBehaviour
 
                 break;
             }
+        }
+    }
+    private void UpdateWaitingQueuePositions()
+    {
+        for (int i = 0; i < waitingQueue.Count; i++)
+        {
+            Vector3 offset = new Vector3(0, 0, -i * queueSpacing);
+            waitingQueue[i].Move(waitingArea.position + offset);
         }
     }
 

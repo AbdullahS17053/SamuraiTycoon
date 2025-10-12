@@ -1,7 +1,9 @@
-﻿using UnityEngine;
+﻿using DG.Tweening;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System;
+using UnityEngine;
+using UnityEngine.UI;
 
 public class TroopUnit : MonoBehaviour
 {
@@ -11,7 +13,7 @@ public class TroopUnit : MonoBehaviour
 
     [Header("Troop Stats")]
     public float currentPower = 10f;
-    public float basePower = 10f;
+    public Slider slider;
 
     [Header("State Management")]
     public TrainingBuilding currentTrainingBuilding;
@@ -30,13 +32,17 @@ public class TroopUnit : MonoBehaviour
     {
         currentTrainingBuilding = BuildingManager3D.Instance.GetBuilding(troopLevel);
         navAgent.SetDestination(currentTrainingBuilding.waitingArea.position);
+        Walk();
+    }
+    public void Move(Vector3 here)
+    {
+        navAgent.SetDestination(here);
     }
 
     public void SkipTraining()
     {
         troopLevel++;
-        Walk();
-
+        
         MoveToBuilding();
     }
 
@@ -44,10 +50,20 @@ public class TroopUnit : MonoBehaviour
     {
         navAgent.SetDestination(currentTrainingBuilding.trainingArea.position);
 
+        while (navAgent.pathPending || navAgent.remainingDistance > navAgent.stoppingDistance)
+        {
+            yield return null;
+        }
+
+        slider.gameObject.SetActive(true);
+        slider.maxValue = 100;
+        slider.value = 1;
+        slider.DOValue(100, currentTrainingBuilding.baseTrainingTime).SetEase(Ease.Linear);
         Train();
 
         yield return new WaitForSeconds(time);
-         
+
+        slider.gameObject.SetActive(false);
         currentTrainingBuilding.CompleteCurrentTraining(this);
         currentPower += power;
         troopLevel++;
@@ -57,10 +73,12 @@ public class TroopUnit : MonoBehaviour
     }
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Building") && other.gameObject.GetComponent<TrainingBuilding>().ID == currentTrainingBuilding.ID)
+        if (other.CompareTag("Building"))
         {
-            Stand();
-            currentTrainingBuilding.AssignTroop(this);
+            if(other.gameObject.GetComponent<TrainingBuilding>().ID == currentTrainingBuilding.ID)
+            {
+                currentTrainingBuilding.AssignTroop(this);
+            }
         }
     }
 
@@ -70,7 +88,7 @@ public class TroopUnit : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    void Stand()
+    public void Stand()
     {
         animator.SetBool("Walking", false);
     }

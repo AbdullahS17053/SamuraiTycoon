@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 021067ee0dce4994a9cc8b6e4607daec, type: 3}
-  m_Name: Module_Dojo_Katana
+  m_Name: Gate Speed
   m_EditorClassIdentifier: 
-  moduleName: Katana Mastery
-  description: Master the samurai sword for faster training
-  icon: {fileID: 21300000, guid: d5f6ac7b59651ae40970010c210e4cce, type: 3}
+  moduleName: Inspection Speed
+  description: Increases the speed of inspecting recruits
+  icon: {fileID: 21300000, guid: 9aef39e094f54184eba2cad6a87d65fe, type: 3}
   isActive: 1
   showInUI: 1
-  buttonText: Train Sword
+  buttonText: Inspection Speed
   buttonColor: {r: 1, g: 1, b: 1, a: 1}
   level: 1
-  maxLevel: 100
+  maxLevel: 10
   showMaxLevelWarning: 1
   cost: 100
-  costMultiplier: 1.4
-  effectDescription: Faster samurai training through sword mastery
+  costMultiplier: 1.1
+  effectDescription: Increases production speed

@@ -783,8 +783,9 @@ MonoBehaviour:
   descriptionText: {fileID: 353377392192787953}
   costText: {fileID: 6978046007434057886}
   levelText: {fileID: 7502103951404887094}
-  backgroundImage: {fileID: 5888672363298724128}
   iconImage: {fileID: 2318879863394474187}
+  _currentModule: {fileID: 0}
+  _currentBuilding: {fileID: 0}
 --- !u!1 &8081423491668042178
 GameObject:
   m_ObjectHideFlags: 0
@@ -1039,7 +1040,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.6415094, g: 0.6415094, b: 0.6415094, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

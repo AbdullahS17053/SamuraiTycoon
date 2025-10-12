@@ -13,19 +13,26 @@ public class ModuleButtonController : MonoBehaviour
     public Image iconImage;
 
     public BuildingModule _currentModule;
+    public TrainingBuilding _currentBuilding;
 
-    private void Awake()
+    private void Start()
     {
         Setup();
     }
 
     private void Setup()
     {
-        button.onClick.AddListener(UpdateButton);
+        button.onClick.AddListener(Upgrade);
         UpdateButton();
 
 
         iconImage.sprite = _currentModule.icon;
+    }
+
+    public void Upgrade()
+    {
+        _currentModule.OnButtonClick(_currentBuilding);
+        UpdateButton();
     }
 
     public void UpdateButton()

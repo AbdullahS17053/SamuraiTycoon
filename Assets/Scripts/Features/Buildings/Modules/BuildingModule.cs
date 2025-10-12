@@ -43,6 +43,7 @@ public abstract class BuildingModule : ScriptableObject
     protected void TriggerCompleted(string buildingId) => OnModuleCompleted?.Invoke(buildingId);
     protected void TriggerProgress(string buildingId) => OnModuleProgress?.Invoke(buildingId);
 
+
     // Cost calculation
     public virtual int GetCurrentCost()
     {

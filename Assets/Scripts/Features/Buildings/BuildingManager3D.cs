@@ -24,8 +24,15 @@ public class BuildingManager3D : MonoBehaviour
 
     public void ShowBuildingPanel(TrainingBuilding building)
     {
-        buildingPanel.gameObject.SetActive(true);
-        buildingPanel.OnBuildingUpgraded(building);
+        if (building.castle)
+        {
+            WarManager.instance.OpenWarPanel();
+        }
+        else
+        {
+            buildingPanel.gameObject.SetActive(true);
+            buildingPanel.OnBuildingUpgraded(building);
+        }
     }
 
     public void HideBuildingPanel()

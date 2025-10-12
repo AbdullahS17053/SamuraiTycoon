@@ -2,7 +2,7 @@
 
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance { get; private set; }
+    public static GameManager Instance;
 
     [Header("Core Managers")]
     public EconomyManager Economy;
@@ -17,17 +17,7 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        Debug.Log("=== SAMURAI TYCOON INITIALIZING ===");
-
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        Instance = this;
     }
 
 

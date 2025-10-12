@@ -19,11 +19,9 @@ MonoBehaviour:
   showInUI: 1
   buttonText: Train Bushido
   buttonColor: {r: 1, g: 1, b: 1, a: 1}
+  level: 1
   maxLevel: 100
   showMaxLevelWarning: 1
-  activationCost: 150
+  cost: 100
   costMultiplier: 1.3
-  baseIncomeBonus: 1
-  incomeMultiplier: 1.15
-  incomeInterval: 1
   effectDescription: Increases gold generation through warrior discipline

@@ -19,6 +19,7 @@ public class AcademyBuilding : MonoBehaviour
     public class BuildingUnlock
     {
         public TrainingBuilding building;
+        public GameObject visuals;
         public int unlockCost;
         public GameObject purchased;
         public bool locked = false;
@@ -33,6 +34,7 @@ public class AcademyBuilding : MonoBehaviour
             if (!Buildings[i].building.locked)
             {
                 Buildings[i].purchased.SetActive(true);
+                Buildings[i].visuals.SetActive(true);
             }
         }
     }
@@ -54,11 +56,12 @@ public class AcademyBuilding : MonoBehaviour
 
     void RefreshAcademyUI()
     {
-        for (int i = 0; Buildings.Length >= i; i++)
+        for (int i = 0; Buildings.Length > i; i++)
         {
             if (!Buildings[i].building.locked)
             {
                 Buildings[i].purchased.SetActive(true);
+                Buildings[i].visuals.SetActive(true);
             }
         }
     }

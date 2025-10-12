@@ -26,12 +26,6 @@ public class CapacityModule : BuildingModule
         return effectDescription;
     }
 
-    // Override cost methods for capacity module
-    public override int GetCurrentCost()
-    {
-        throw new System.NotImplementedException();
-    }
-
     // Capacity module reaches max level when all worker slots are filled
     public override bool IsMaxLevel()
     {

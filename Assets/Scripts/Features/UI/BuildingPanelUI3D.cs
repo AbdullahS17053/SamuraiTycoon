@@ -94,6 +94,7 @@ public class BuildingPanelUI3D : MonoBehaviour
             {
                 GameObject buttonObj = Instantiate(moduleButtonPrefab, moduleContainer);
                 buttonObj.GetComponent<ModuleButtonController>()._currentModule = module; 
+                buttonObj.GetComponent<ModuleButtonController>()._currentBuilding = currentBuilding; 
 
                 _moduleButtons.Add(buttonObj);
             }
