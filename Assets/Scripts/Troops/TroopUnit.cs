@@ -37,6 +37,16 @@ public class TroopUnit : MonoBehaviour
     public void Move(Vector3 here)
     {
         navAgent.SetDestination(here);
+        animator.SetBool("Walking", true);
+        StartCoroutine(CheckArrival());
+    }
+
+    private IEnumerator CheckArrival()
+    {
+        while (navAgent.pathPending || navAgent.remainingDistance > navAgent.stoppingDistance)
+            yield return null;
+
+        animator.SetBool("Walking", false);
     }
 
     public void SkipTraining()
