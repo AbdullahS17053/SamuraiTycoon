@@ -1,52 +1,58 @@
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class VFXManager : MonoBehaviour
 {
     public static VFXManager instance;
 
-    public ParticleSystem swordSlash;
-    public ParticleSystem hitSword;
-    public ParticleSystem takeDamageEnemy;
-    public ParticleSystem enemyDie;
-    public ParticleSystem arrowHit;
-    public ParticleSystem playerDamage;
+    public Canvas uiCanvas;
+
+    public ParticleSystem trainingDone;
+    public ParticleSystem buildingupgrade;
+    public ParticleSystem buildingTrained;
+    public ParticleSystem income;
+    public ParticleSystem speed;
+    public ParticleSystem capacity;
 
     private void Awake()
     {
         instance = this;
     }
 
-    public void SwordSlash(Vector3 pos)
+    public void Trained(Vector3 pos)
     {
-        Play(swordSlash, pos);
+        Play(trainingDone, pos);
     }
-    public void EnemyDamage(Vector3 pos)
+    public void BuildingUpgrade(Vector3 pos)
     {
-        Play(takeDamageEnemy, pos);
+        Play(buildingupgrade, pos);
     }
-    public void SwordHit(Vector3 pos)
+    public void BuildingTrained(Vector3 pos)
     {
-        Play(hitSword, pos);
-        CamShake();
+        Play(buildingTrained, pos);
     }
-    public void EnemyDie(Vector3 pos)
+    public void Income()
     {
-        Play(enemyDie, pos);
+        PlayUI(income);
     }
-    public void ArrowHit(Vector3 pos)
+    public void Speed()
     {
-        Play(arrowHit, pos);
+        PlayUI(speed);
     }
-    public void PlayerDamage(Vector3 pos)
+    public void Capacity()
     {
-        Play(playerDamage, pos);
-        CamShake();
+        PlayUI(capacity);
     }
 
     private void Play(ParticleSystem p, Vector3 pos)
     {
-        Instantiate(p, pos, Quaternion.identity);
+        Instantiate(p, pos, p.transform.rotation);
+    }
+
+    private void PlayUI(ParticleSystem psPrefab)
+    {
+        
     }
 
     private void CamShake()

@@ -33,6 +33,7 @@ public class BuildingPanelUI3D : MonoBehaviour
 
     private TrainingBuilding currentBuilding;
     private List<GameObject> _moduleButtons = new List<GameObject>();
+    private bool used;
 
 
     private void Awake()
@@ -53,6 +54,7 @@ public class BuildingPanelUI3D : MonoBehaviour
         if(building == null)
         {
             building = currentBuilding;
+            used = true;
         }
         else
         {
@@ -109,5 +111,16 @@ public class BuildingPanelUI3D : MonoBehaviour
                 Destroy(button);
         }
         _moduleButtons.Clear();
+        used = false;
+    }
+
+    public void OnPanelClose()
+    {
+        if (used)
+        {
+            VFXManager.instance.BuildingUpgrade(currentBuilding.gameObject.transform.position);
+        }
+
+        transform.gameObject.SetActive(false);
     }
 }

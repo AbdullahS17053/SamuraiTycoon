@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 using static AcademyBuilding;
 
 public class AcademyBuilding : MonoBehaviour
@@ -23,6 +24,7 @@ public class AcademyBuilding : MonoBehaviour
         public int unlockCost;
         public GameObject purchased;
         public bool locked = false;
+        public float timeToUnlock = 60f;
     }
 
     void Start()
@@ -71,7 +73,7 @@ public class AcademyBuilding : MonoBehaviour
         if (EconomyManager.Instance.SpendGold(Buildings[buildingIndex].unlockCost))
         {
 
-            Buildings[buildingIndex].building.UnlockBuilding();
+            Buildings[buildingIndex].building.UnlockBuilding(Buildings[buildingIndex].timeToUnlock);
             RefreshAcademyUI();
         }
         else

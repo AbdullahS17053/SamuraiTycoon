@@ -1,6 +1,10 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using DG.Tweening;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 public class TrainingBuilding : MonoBehaviour
 {
@@ -44,12 +48,18 @@ public class TrainingBuilding : MonoBehaviour
     public bool castle;
     public bool gate;
     public List<TroopUnit> troops = new List<TroopUnit>();
+
+    public GameObject Loading;
+    public UnityEngine.UI.Slider LoadingSlider;
+    public GameObject Loaded;
     public void StoreTroops(TroopUnit troop)
     {
         troops.Add(troop);
         troop.RestNow();
 
-        WarManager.instance.AddTroop(Mathf.CeilToInt(troop.currentPower));
+        WarManager.instance.AddTroop(troop);
+
+
     }
 
     public bool CanTrainTroop()
@@ -135,8 +145,25 @@ public class TrainingBuilding : MonoBehaviour
         }
     }
 
-    public void UnlockBuilding()
+    public void UnlockBuilding(float duration)
     {
+        locked = false;
+        StartCoroutine(Unlocking(duration));
+    }
+
+    IEnumerator Unlocking(float seconds)
+    {
+        Loading.SetActive(true);
+
+        LoadingSlider.maxValue = seconds;
+        LoadingSlider.value = 1;
+        LoadingSlider.DOValue(seconds, seconds).SetEase(Ease.Linear);
+
+        yield return new WaitForSeconds(seconds);
+
+
+        Loading.SetActive(false);
+        Loaded.SetActive(true);
         locked = false;
     }
 
@@ -155,16 +182,20 @@ public class TrainingBuilding : MonoBehaviour
         float baseIncome = BaseIncomePerTrained;
 
         BaseIncomePerTrained = Mathf.RoundToInt(baseIncome *= IncomeMultiplier);
+
+        VFXManager.instance.Income();
     }
 
     public void UpgradeEfficiency()
     {
         baseTrainingTime = Mathf.RoundToInt(baseTrainingTime /= IncomeMultiplier);
+        VFXManager.instance.Speed();
     }
 
     public void UpgradeCapcity()
     {
         currentWorkers++;
+        VFXManager.instance.Capacity();
 
         if (waitingQueue.Count > 0)
         {

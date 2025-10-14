@@ -12,7 +12,7 @@ public class TroopUnit : MonoBehaviour
     public string troopId;
 
     [Header("Troop Stats")]
-    public float currentPower = 10f;
+    public int currentPower = 10;
     public Slider slider;
 
     [Header("State Management")]
@@ -63,6 +63,14 @@ public class TroopUnit : MonoBehaviour
 
         yield return new WaitForSeconds(time);
 
+
+        if (!currentTrainingBuilding.gate)
+        {
+            UIManager.instance.SpawnAndAnimate(transform.position);
+            VFXManager.instance.Trained(transform.position);
+        }
+        VFXManager.instance.BuildingTrained(transform.position);
+
         slider.gameObject.SetActive(false);
         currentTrainingBuilding.CompleteCurrentTraining(this);
         currentPower += power;
@@ -85,7 +93,8 @@ public class TroopUnit : MonoBehaviour
     public void RestNow()
     {
         Stand();
-        gameObject.SetActive(false);
+        //gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 
     public void Stand()
