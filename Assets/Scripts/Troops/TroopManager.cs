@@ -38,7 +38,7 @@ public class TroopManager : MonoBehaviour
                     Instantiate(troopPrefab, spawnPosition.position, Quaternion.identity, troopContainer);
                 }
             }
-            yield return new WaitForSeconds(spawnInterval);
+                yield return new WaitForSeconds(spawnInterval);
         }
     }
 

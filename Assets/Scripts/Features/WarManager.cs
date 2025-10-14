@@ -19,14 +19,14 @@ public class WarManager : MonoBehaviour
     public void OpenWarPanel()
     {
         UI.SetActive(true);
-        warPower.text = warPowerStore.ToString();
-        warTroops.text = warTroopsStore.ToString();
     }
 
     public void AddTroop(int power)
     {
         warPowerStore += power;
         warTroopsStore++;
+        warPower.text = warPowerStore.ToString();
+        warTroops.text = warTroopsStore.ToString();
     }
 
     public void SendToWar()

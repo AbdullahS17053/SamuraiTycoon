@@ -76,9 +76,16 @@ public class TrainingBuilding : MonoBehaviour
             }
             else
             {
-                waitingQueue.Add(troop);
-                troop.Stand();
-                UpdateWaitingQueuePositions();
+                if(waitingQueue.Count >= maxWait)
+                {
+                    troop.SkipTraining();
+                }
+                else
+                {
+                    waitingQueue.Add(troop);
+                    troop.Stand();
+                    UpdateWaitingQueuePositions();
+                }
             }
         }
         else

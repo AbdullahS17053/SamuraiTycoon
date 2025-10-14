@@ -372,8 +372,8 @@ MonoBehaviour:
   troopContainer: {fileID: 2011089513}
   spawnPosition: {fileID: 1246129631}
   gate: {fileID: 1515071186}
-  spawnInterval: 60
-  troopsPerSpawn: 5
+  spawnInterval: 5
+  troopsPerSpawn: 10
 --- !u!1 &11105185
 GameObject:
   m_ObjectHideFlags: 0
@@ -14917,6 +14917,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 9964487}
+  - {fileID: 1863083962}
   m_Father: {fileID: 1302682440}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1256733584
@@ -15976,7 +15977,25 @@ PrefabInstance:
       propertyPath: m_TagString
       value: Building
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7868171993106783334, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7868331524491390856, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869609259854003514, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869668952398210641, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869668953869433060, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869883826102161216, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7868318261106485560, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869873805992768588, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7870966515240454565, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869548051826671748, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869773939892596324, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869562294368748942, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869468246186090903, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869647583596244288, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869097112931073352, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869835182900637440, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869049155621364520, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
+    - {fileID: 7869678777752055237, guid: de532c862ff5a9642a2e51ed757c6e1b, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -16073,8 +16092,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 10.402805, y: 17.18623, z: 10.402803}
-  m_Center: {x: 0, y: 8.593115, z: 0.0000009536743}
+  m_Size: {x: 10.909664, y: 17.18623, z: 11.017801}
+  m_Center: {x: -0.25342917, y: 8.593115, z: -0.30749798}
 --- !u!114 &1347157401
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18192,10 +18211,10 @@ MonoBehaviour:
   DisplayName: Gate
   locked: 0
   Description: Recruit Samurais
-  BaseIncomePerTrained: 100
-  IncomeMultiplier: 1.15
-  PowerAddToTroop: 5
-  PowerIncrease: 1.5
+  BaseIncomePerTrained: 0
+  IncomeMultiplier: 1
+  PowerAddToTroop: 0
+  PowerIncrease: 0
   currentWorkers: 1
   maxWorkers: 10
   Icon: {fileID: -842201563, guid: b365d65ebf1522d46beaf8f609945da7, type: 3}
@@ -18206,7 +18225,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 77b4f519205d53845a3012f6d9805075, type: 2}
   level: 1
   maxLevel: 100
-  baseTrainingTime: 5
+  baseTrainingTime: 2
   trainingTimerReducer: 1.1
   trainingQueue: []
   waitingQueue: []
@@ -22995,6 +23014,56 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 488988, guid: 4e083bfd88778534b8133830f4df0328, type: 3}
   m_PrefabInstance: {fileID: 1862436644}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1863083961
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1863083962}
+  - component: {fileID: 1863083963}
+  m_Layer: 0
+  m_Name: VFX Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1863083962
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1863083961}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1256733583}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1863083963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1863083961}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e687dc63a56fbb47b26d975f2d4587b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  swordSlash: {fileID: 0}
+  hitSword: {fileID: 0}
+  takeDamageEnemy: {fileID: 0}
+  enemyDie: {fileID: 0}
+  arrowHit: {fileID: 0}
+  playerDamage: {fileID: 0}
 --- !u!1 &1866457033
 GameObject:
   m_ObjectHideFlags: 0
