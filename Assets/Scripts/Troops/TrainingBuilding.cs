@@ -144,9 +144,33 @@ public class TrainingBuilding : MonoBehaviour
             waitingQueue[i].Move(waitingArea.position + offset);
         }
     }
+    public void Remove(int ID)
+    {
+        for (int i = 0; i < trainingQueue.Count; i++)
+        {
+            if (trainingQueue[i].troopId == ID)
+            {
+                trainingQueue.RemoveAt(i);
+
+                break;
+            }
+        }
+        for (int e = 0; e < waitingQueue.Count; e++)
+        {
+            if (waitingQueue[e].troopId == ID)
+            {
+                waitingQueue.RemoveAt(e);
+
+                UpdateWaitingQueuePositions();
+
+                break;
+            }
+        }
+    }
 
     public void UnlockBuilding(float duration)
     {
+        Debug.Log("unlocking");
         StartCoroutine(Unlocking(duration));
     }
 

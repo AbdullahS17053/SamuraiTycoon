@@ -19,11 +19,9 @@ MonoBehaviour:
   showInUI: 1
   buttonText: Train Volley
   buttonColor: {r: 1, g: 1, b: 1, a: 1}
+  level: 1
   maxLevel: 100
   showMaxLevelWarning: 1
-  activationCost: 180
+  cost: 100
   costMultiplier: 1.35
-  baseSpeedMultiplier: 1.15
-  speedIncreasePerLevel: 0.06
-  maxSpeedMultiplier: 2
   effectDescription: Faster archer training through rapid fire techniques

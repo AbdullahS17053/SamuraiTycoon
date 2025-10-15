@@ -563,7 +563,7 @@ MonoBehaviour:
   currentPower: 10
   slider: {fileID: 6880069136262773986}
   currentTrainingBuilding: {fileID: 0}
-  troopLevel: 0
+  troopLevel: -1
   navAgent: {fileID: 1224350982017716697}
   animator: {fileID: 3000920115710250546}
 --- !u!1 &4415667529538280403

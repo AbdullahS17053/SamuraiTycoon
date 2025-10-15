@@ -56,25 +56,14 @@ public class AcademyBuilding : MonoBehaviour
         }
     }
 
-    void RefreshAcademyUI()
-    {
-        for (int i = 0; Buildings.Length > i; i++)
-        {
-            if (!Buildings[i].building.locked)
-            {
-                Buildings[i].purchased.SetActive(true);
-                Buildings[i].visuals.SetActive(true);
-            }
-        }
-    }
-
     public void UnlockBuilding(int buildingIndex)
     {
         if (EconomyManager.Instance.SpendGold(Buildings[buildingIndex].unlockCost))
         {
 
             Buildings[buildingIndex].building.UnlockBuilding(Buildings[buildingIndex].timeToUnlock);
-            RefreshAcademyUI();
+            Buildings[buildingIndex].purchased.SetActive(true);
+            Buildings[buildingIndex].visuals.SetActive(true);
         }
         else
         {

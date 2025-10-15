@@ -19,11 +19,9 @@ MonoBehaviour:
   showInUI: 1
   buttonText: Practice Zen
   buttonColor: {r: 1, g: 1, b: 1, a: 1}
+  level: 1
   maxLevel: 100
   showMaxLevelWarning: 1
-  activationCost: 120
+  cost: 100
   costMultiplier: 1.25
-  baseIncomeBonus: 2.5
-  incomeMultiplier: 1.15
-  incomeInterval: 1
   effectDescription: Increases gold through focused archery training

@@ -26,7 +26,7 @@ public class VFXManager : MonoBehaviour
     }
     public void BuildingUpgrade(Vector3 pos)
     {
-        Play(buildingupgrade, pos);
+        Play(buildingupgrade, new Vector3(pos.x, 0.2f, pos.z));
     }
     public void BuildingTrained(Vector3 pos)
     {

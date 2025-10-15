@@ -9,7 +9,7 @@ public class TroopUnit : MonoBehaviour
 {
 
     [Header("Troop Identification")]
-    public string troopId;
+    public int troopId;
 
     [Header("Troop Stats")]
     public int currentPower = 10;
@@ -17,7 +17,7 @@ public class TroopUnit : MonoBehaviour
 
     [Header("State Management")]
     public TrainingBuilding currentTrainingBuilding;
-    public int troopLevel = 0;
+    public int troopLevel = -1;
 
     public UnityEngine.AI.NavMeshAgent navAgent;
 
@@ -30,6 +30,12 @@ public class TroopUnit : MonoBehaviour
 
     void MoveToBuilding()
     {
+        if(currentTrainingBuilding != null)
+        {
+            currentTrainingBuilding.Remove(troopId);
+        }
+
+        troopLevel++;
         currentTrainingBuilding = BuildingManager3D.Instance.GetBuilding(troopLevel);
         navAgent.SetDestination(currentTrainingBuilding.waitingArea.position);
         Walk();
@@ -51,8 +57,6 @@ public class TroopUnit : MonoBehaviour
 
     public void SkipTraining()
     {
-        troopLevel++;
-        
         MoveToBuilding();
     }
 
@@ -84,7 +88,6 @@ public class TroopUnit : MonoBehaviour
         slider.gameObject.SetActive(false);
         currentTrainingBuilding.CompleteCurrentTraining(this);
         currentPower += power;
-        troopLevel++;
         Walk();
 
         MoveToBuilding();
