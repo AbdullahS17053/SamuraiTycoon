@@ -15,7 +15,10 @@ public class WarManager : MonoBehaviour
     public GameObject clearedPanel;
     public GameObject warOnButton;
     public GameObject warWonButton;
+    public GameObject warLostButton;
     public TextMeshProUGUI textRewardGot;
+    public TextMeshProUGUI textLostPower;
+    public TextMeshProUGUI textLostTroops;
     public TextMeshProUGUI textPower;
     public TextMeshProUGUI textCurrentPower;
     public TextMeshProUGUI textReward;
@@ -99,21 +102,15 @@ public class WarManager : MonoBehaviour
             {
                 if (war.ID == ID)
                 {
-                if (war.clear)
-                {
-                    clearedPanel.SetActive(war.clear);
-                }
-                else
-                {
-                    currentWarSite = war;
-                    zonePanel.SetActive(true);
-                    textPower.text = war.Power.ToString();
-                    textReward.text = war.Reward.ToString();
-                    textCurrentPower.text = warPowerStore.ToString();
-                    textTime.text = war.Time.ToString();
-                }
+                clearedPanel.SetActive(war.clear);
+                currentWarSite = war;
+                zonePanel.SetActive(true);
+                textPower.text = war.Power.ToString();
+                textReward.text = war.Reward.ToString();
+                textCurrentPower.text = warPowerStore.ToString();
+                textTime.text = war.Time.ToString();
 
-                    break;
+                break;
                 }
             }
     }
@@ -156,6 +153,10 @@ public class WarManager : MonoBehaviour
         {
             warPowerStore -= currentOnWar.Power;
             warTroopsStore -= (int)(warTroopsStore * 0.6f);
+
+            textLostPower.text = currentOnWar.Power.ToString();
+            textLostTroops.text = (warTroopsStore * 0.6f).ToString();
+            warLostButton.SetActive(true);
 
             currentOnWar.WarEnded();
             onWar = false;

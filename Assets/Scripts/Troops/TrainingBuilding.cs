@@ -147,7 +147,6 @@ public class TrainingBuilding : MonoBehaviour
 
     public void UnlockBuilding(float duration)
     {
-        locked = false;
         StartCoroutine(Unlocking(duration));
     }
 
