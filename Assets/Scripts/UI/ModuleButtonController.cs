@@ -41,6 +41,5 @@ public class ModuleButtonController : MonoBehaviour
         descriptionText.text = _currentModule.description;
         levelText.text = _currentModule.level.ToString();
         costText.text = _currentModule.GetCurrentCost().ToString();
-
     }
 }

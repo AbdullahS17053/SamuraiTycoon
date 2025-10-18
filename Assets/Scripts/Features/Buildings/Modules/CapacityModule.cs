@@ -15,7 +15,7 @@ public class CapacityModule : BuildingModule
     {
         if (EconomyManager.Instance.SpendGold(GetCurrentCost()))
         {
-            building.UpgradeCapcity();
+            building.UpgradeCapacity();
             BuildingPanelUI3D.Instance.OnBuildingUpgraded(null);
             level++;
         }

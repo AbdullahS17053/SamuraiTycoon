@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-using System.Collections;
 
 public class TroopManager : MonoBehaviour
 {
@@ -14,40 +12,82 @@ public class TroopManager : MonoBehaviour
     [Header("Troop Spawning")]
     public float spawnInterval = 60f;
     public int troopsPerSpawn = 1;
-    private int troopCount;
+    private int troopCount = 0;
 
-    private void Start()
+    // OPTIMIZED: Object pooling
+    private Queue<GameObject> troopPool = new Queue<GameObject>();
+    private List<GameObject> activeTroops = new List<GameObject>();
+    private const int INITIAL_POOL_SIZE = 40;
+
+    private Coroutine spawnCoroutine;
+
+    void Start()
     {
-        StartCoroutine(TroopSpawn());
+        InitializePool();
+        spawnCoroutine = StartCoroutine(TroopSpawn());
     }
 
-    IEnumerator TroopSpawn()
+    void InitializePool()
     {
-        for (; ;)
+        for (int i = 0; i < INITIAL_POOL_SIZE; i++)
         {
-            if(gate.waitingQueue.Count < gate.maxWait/2)
+            CreatePooledTroop();
+        }
+    }
+
+    void CreatePooledTroop()
+    {
+        GameObject troopObj = Instantiate(troopPrefab, troopContainer);
+        TroopUnit troop = troopObj.GetComponent<TroopUnit>();
+        troop.troopId = troopCount++;
+        troopObj.SetActive(false);
+        troopPool.Enqueue(troopObj);
+    }
+
+    System.Collections.IEnumerator TroopSpawn()
+    {
+        while (true)
+        {
+            if (gate.waitingQueue.Count < gate.maxWait / 2)
             {
-                if (troopsPerSpawn > 1)
-                {
-                    for (int i = 0; i < troopsPerSpawn; i++)
-                    {
-                        CreateNewTroop();
-                    }
-                }
-                else
+                int spawnCount = Mathf.Min(troopsPerSpawn, gate.maxWait - gate.waitingQueue.Count);
+
+                for (int i = 0; i < spawnCount; i++)
                 {
                     CreateNewTroop();
                 }
             }
-                yield return new WaitForSeconds(spawnInterval);
+            yield return new WaitForSeconds(spawnInterval);
         }
     }
 
     public void CreateNewTroop()
     {
-        GameObject troopObj = Instantiate(troopPrefab, spawnPosition.position, Quaternion.identity, troopContainer);
+        if (troopPool.Count == 0)
+        {
+            CreatePooledTroop();
+        }
+
+        GameObject troopObj = troopPool.Dequeue();
+        troopObj.transform.position = spawnPosition.position;
+        troopObj.SetActive(true);
+        activeTroops.Add(troopObj);
+
         TroopUnit troop = troopObj.GetComponent<TroopUnit>();
-        troop.troopId = troopCount;
-        troopCount++; 
+        troop.troopId = troopCount++;
+    }
+
+    // OPTIMIZED: Return troop to pool
+    public void ReturnTroopToPool(GameObject troopObj)
+    {
+        troopObj.SetActive(false);
+        troopPool.Enqueue(troopObj);
+        activeTroops.Remove(troopObj);
+    }
+
+    void OnDestroy()
+    {
+        if (spawnCoroutine != null)
+            StopCoroutine(spawnCoroutine);
     }
 }

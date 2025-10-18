@@ -1,10 +1,8 @@
 ﻿using DG.Tweening;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.UIElements;
 
 public class TrainingBuilding : MonoBehaviour
 {
@@ -18,17 +16,15 @@ public class TrainingBuilding : MonoBehaviour
     public int BaseIncomePerTrained = 100;
     public float IncomeMultiplier = 1.1f;
     public int PowerAddToTroop = 1;
-    public float PowerIncrease = 1.1f;
     public int currentWorkers = 1;
-    public int maxWorkers;
+    public int maxWorkers = 5;
 
     [Header("Visuals")]
     public Sprite Icon;
     public Sprite Banner;
     public Color ThemeColor = Color.white;
 
-    [Header("Building Modules - DRAG MODULES HERE!")]
-    [Tooltip("Add modules to create upgrade buttons in the building panel")]
+    [Header("Building Modules")]
     public List<BuildingModule> modules = new List<BuildingModule>();
 
     [Header("Building Configuration")]
@@ -47,61 +43,85 @@ public class TrainingBuilding : MonoBehaviour
 
     public bool castle;
     public bool gate;
-    public List<TroopUnit> troops = new List<TroopUnit>();
+
+    // OPTIMIZED: Object pooling for troops
+    private Queue<TroopUnit> troopPool = new Queue<TroopUnit>();
+    private List<TroopUnit> activeTroops = new List<TroopUnit>();
 
     public GameObject Loading;
-    public UnityEngine.UI.Slider LoadingSlider;
+    public Slider LoadingSlider;
     public GameObject Loaded;
-    public void StoreTroops(TroopUnit troop)
+
+    // OPTIMIZED: Cache components
+    private Coroutine currentUnlockCoroutine;
+
+    public void StoreTroop(TroopUnit troop)
     {
-        troops.Add(troop);
-        troop.RestNow();
-
-        WarManager.instance.AddTroop(troop);
-
-
+        if (castle)
+        {
+            ReturnTroopToPool(troop);
+            WarManager.instance.AddTroop(troop);
+        }
     }
 
     public bool CanTrainTroop()
     {
-        if (trainingQueue.Count >= currentWorkers) return false;
-
-        return true;
+        return trainingQueue.Count < currentWorkers;
     }
 
     public void AssignTroop(TroopUnit troop)
     {
         if (castle)
         {
-            StoreTroops(troop);
+            StoreTroop(troop);
+            ReturnTroopToPool(troop);
             return;
         }
 
-        if (!locked)
+        if (locked)
         {
-            if (CanTrainTroop())
-            {
-                StartTraining(troop);
-                trainingQueue.Add(troop);
-            }
-            else
-            {
-                if(waitingQueue.Count >= maxWait)
-                {
-                    troop.SkipTraining();
-                }
-                else
-                {
-                    waitingQueue.Add(troop);
-                    troop.Stand();
-                    UpdateWaitingQueuePositions();
-                }
-            }
+            troop.SkipTraining();
+            return;
+        }
+
+        if (CanTrainTroop())
+        {
+            StartTraining(troop);
+            trainingQueue.Add(troop);
         }
         else
         {
-            troop.SkipTraining();
+            if (waitingQueue.Count < maxWait)
+            {
+                waitingQueue.Add(troop);
+                troop.Stand();
+                UpdateWaitingQueuePositions();
+            }
+            else
+            {
+                troop.SkipTraining();
+            }
         }
+    }
+
+    // OPTIMIZED: Object pooling methods
+    public TroopUnit GetPooledTroop()
+    {
+        if (troopPool.Count > 0)
+        {
+            TroopUnit troop = troopPool.Dequeue();
+            troop.gameObject.SetActive(true);
+            activeTroops.Add(troop);
+            return troop;
+        }
+        return null;
+    }
+
+    public void ReturnTroopToPool(TroopUnit troop)
+    {
+        troop.gameObject.SetActive(false);
+        troopPool.Enqueue(troop);
+        activeTroops.Remove(troop);
     }
 
     void StartTraining(TroopUnit troop)
@@ -111,31 +131,28 @@ public class TrainingBuilding : MonoBehaviour
 
     public void CompleteCurrentTraining(TroopUnit troop)
     {
-        for(int i = 0; i < trainingQueue.Count; i++)
+        // OPTIMIZED: More efficient removal
+        for (int i = trainingQueue.Count - 1; i >= 0; i--)
         {
-            if(trainingQueue[i].troopId == troop.troopId)
+            if (trainingQueue[i].troopId == troop.troopId)
             {
                 trainingQueue.RemoveAt(i);
-
-                EconomyManager.Instance.AddGold(BaseIncomePerTrained);
-
-                if(waitingQueue.Count > 0)
-                {
-                    for(int e = 0; e < waitingQueue.Count; e++)
-                    {
-                        AssignTroop(waitingQueue[e]);
-                        waitingQueue.RemoveAt(e);
-
-                        UpdateWaitingQueuePositions();
-
-                        break;
-                    }
-                }
-
                 break;
             }
         }
+
+        EconomyManager.Instance.AddGold(BaseIncomePerTrained);
+
+        // OPTIMIZED: Process waiting queue more efficiently
+        if (waitingQueue.Count > 0)
+        {
+            TroopUnit nextTroop = waitingQueue[0];
+            waitingQueue.RemoveAt(0);
+            AssignTroop(nextTroop);
+            UpdateWaitingQueuePositions();
+        }
     }
+
     private void UpdateWaitingQueuePositions()
     {
         for (int i = 0; i < waitingQueue.Count; i++)
@@ -144,25 +161,25 @@ public class TrainingBuilding : MonoBehaviour
             waitingQueue[i].Move(waitingArea.position + offset);
         }
     }
-    public void Remove(int ID)
+
+    public void RemoveTroop(int troopId)
     {
-        for (int i = 0; i < trainingQueue.Count; i++)
+        // OPTIMIZED: Single pass removal
+        for (int i = trainingQueue.Count - 1; i >= 0; i--)
         {
-            if (trainingQueue[i].troopId == ID)
+            if (trainingQueue[i].troopId == troopId)
             {
                 trainingQueue.RemoveAt(i);
-
                 break;
             }
         }
-        for (int e = 0; e < waitingQueue.Count; e++)
+
+        for (int i = waitingQueue.Count - 1; i >= 0; i--)
         {
-            if (waitingQueue[e].troopId == ID)
+            if (waitingQueue[i].troopId == troopId)
             {
-                waitingQueue.RemoveAt(e);
-
+                waitingQueue.RemoveAt(i);
                 UpdateWaitingQueuePositions();
-
                 break;
             }
         }
@@ -170,66 +187,78 @@ public class TrainingBuilding : MonoBehaviour
 
     public void UnlockBuilding(float duration)
     {
-        Debug.Log("unlocking");
-        StartCoroutine(Unlocking(duration));
+        if (currentUnlockCoroutine != null)
+            StopCoroutine(currentUnlockCoroutine);
+
+        currentUnlockCoroutine = StartCoroutine(Unlocking(duration));
     }
 
     IEnumerator Unlocking(float seconds)
     {
         Loading.SetActive(true);
-
         LoadingSlider.maxValue = seconds;
-        LoadingSlider.value = 1;
+        LoadingSlider.value = 0;
+
         LoadingSlider.DOValue(seconds, seconds).SetEase(Ease.Linear);
-
         yield return new WaitForSeconds(seconds);
-
 
         Loading.SetActive(false);
         Loaded.SetActive(true);
         locked = false;
     }
 
-    public BuildingModule GetModule<T>(string moduleName)
+    // OPTIMIZED: More efficient module lookup
+    private Dictionary<string, BuildingModule> moduleCache;
+
+    public BuildingModule GetModule(string moduleName)
     {
-        foreach (var module in modules)
+        if (moduleCache == null)
         {
-            if (module.moduleName == moduleName)
-                return module;
+            moduleCache = new Dictionary<string, BuildingModule>();
+            foreach (var module in modules)
+            {
+                if (module != null)
+                    moduleCache[module.moduleName] = module;
+            }
         }
-        return null;
+
+        moduleCache.TryGetValue(moduleName, out BuildingModule result);
+        return result;
     }
 
     public void UpgradeIncome()
     {
-        float baseIncome = BaseIncomePerTrained;
-
-        BaseIncomePerTrained = Mathf.RoundToInt(baseIncome *= IncomeMultiplier);
-
+        BaseIncomePerTrained = Mathf.RoundToInt(BaseIncomePerTrained * IncomeMultiplier);
         VFXManager.instance.Income();
     }
 
     public void UpgradeEfficiency()
     {
-        baseTrainingTime = Mathf.RoundToInt(baseTrainingTime /= IncomeMultiplier);
+        baseTrainingTime /= trainingTimerReducer;
         VFXManager.instance.Speed();
     }
 
-    public void UpgradeCapcity()
+    public void UpgradeCapacity()
     {
-        currentWorkers++;
-        VFXManager.instance.Capacity();
-
-        if (waitingQueue.Count > 0)
+        if (currentWorkers < maxWorkers)
         {
-            for (int e = 0; e < trainingQueue.Count; e++)
-            {
-                AssignTroop(waitingQueue[e]);
-                waitingQueue.RemoveAt(e);
+            currentWorkers++;
+            VFXManager.instance.Capacity();
 
-                break;
+            if (waitingQueue.Count > 0 && CanTrainTroop())
+            {
+                TroopUnit nextTroop = waitingQueue[0];
+                waitingQueue.RemoveAt(0);
+                AssignTroop(nextTroop);
+                UpdateWaitingQueuePositions();
             }
         }
     }
 
+    // OPTIMIZED: Cleanup on destroy
+    private void OnDestroy()
+    {
+        if (currentUnlockCoroutine != null)
+            StopCoroutine(currentUnlockCoroutine);
+    }
 }
