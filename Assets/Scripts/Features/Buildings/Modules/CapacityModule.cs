@@ -18,6 +18,7 @@ public class CapacityModule : BuildingModule
             building.UpgradeCapacity();
             BuildingPanelUI3D.Instance.OnBuildingUpgraded(null);
             level++;
+            AdManager.instance.OpenAd();
         }
     }
 

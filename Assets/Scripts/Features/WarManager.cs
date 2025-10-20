@@ -128,6 +128,7 @@ public class WarManager : MonoBehaviour
         warPowerStore = 0;
 
         StartCoroutine(GoneOnWar());
+        AdManager.instance.OpenAd();
     }
 
     IEnumerator GoneOnWar()

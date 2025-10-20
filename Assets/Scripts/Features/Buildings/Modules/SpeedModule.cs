@@ -15,6 +15,7 @@ public class SpeedModule : BuildingModule
             building.UpgradeEfficiency();
             BuildingPanelUI3D.Instance.OnBuildingUpgraded(null);
             level++;
+            AdManager.instance.OpenAd();
         }
     }
 

@@ -15,6 +15,7 @@ public class IncomeModule : BuildingModule
             building.UpgradeIncome();
             BuildingPanelUI3D.Instance.OnBuildingUpgraded(null);
             level++;
+            AdManager.instance.OpenAd();
         }
     }
 

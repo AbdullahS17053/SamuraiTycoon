@@ -69,5 +69,6 @@ public class AcademyBuilding : MonoBehaviour
         {
             Debug.Log("❌ Not enough gold to unlock building");
         }
+        AdManager.instance.OpenAd();
     }
 }
