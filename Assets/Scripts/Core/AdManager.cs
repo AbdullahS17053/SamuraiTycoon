@@ -2,15 +2,12 @@ using UnityEngine;
 
 public class AdManager : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public static AdManager instance;
 
-    // Update is called once per frame
-    void Update()
+    public bool ads = true;
+
+    private void Awake()
     {
-        
+        instance = this;
     }
 }

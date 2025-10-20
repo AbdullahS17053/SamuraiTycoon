@@ -1,16 +1,46 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ShopManager : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public static ShopManager Instance;
+
+    public PurchasePanel PurchasePanel;
+    public PurchasePanel PurchaseAddPanel;
+    public GameObject itemSpawn;
+    public Transform itemSpawnArea;
+
+    public List<ItemData> Items;
+
+
+    private void Awake()
     {
-        
+        Instance = this;
     }
 
-    // Update is called once per frame
-    void Update()
+    public void OpenPanel(ItemData data)
     {
-        
+        PurchasePanel.gameObject.SetActive(true);
+        PurchasePanel.OpenPanel(data);
+    }
+    public void OpenADPanel()
+    {
+        PurchaseAddPanel.gameObject.SetActive(true);
+        PurchaseAddPanel.OpenPanel(new ItemData());
+    }
+    public void ClosePanel()
+    {
+        PurchasePanel.gameObject.SetActive(false);
+    }
+
+    public void AddItem(ItemData item)
+    {
+        Items.Add(item);
+
+        item _item;
+
+        _item = Instantiate(itemSpawn, itemSpawnArea).GetComponent<item>();
+
+        _item.OpenPanel(item);
     }
 }

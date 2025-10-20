@@ -3,11 +3,14 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
+using static UnityEngine.InputManagerEntry;
 
 public class TroopUnit : MonoBehaviour
 {
     [Header("Troop Identification")]
     public int troopId;
+
+    public GameObject[] skins;
 
     [Header("Troop Stats")]
     public int currentPower = 10;
@@ -16,6 +19,7 @@ public class TroopUnit : MonoBehaviour
     [Header("State Management")]
     public TrainingBuilding currentTrainingBuilding;
     public int troopLevel = -1;
+    public int troopSkin = 0;
 
     // OPTIMIZED: Cached components
     private NavMeshAgent navAgent;
@@ -123,6 +127,11 @@ public class TroopUnit : MonoBehaviour
             currentTrainingBuilding.CompleteCurrentTraining(this);
         }
 
+        foreach(GameObject g in skins)
+        {
+            g.SetActive(false);
+        }
+        skins[troopLevel].SetActive(true);
         currentPower += power;
         MoveToBuilding();
     }

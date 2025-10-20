@@ -6,21 +6,20 @@ public class SFXManager : MonoBehaviour
 
     public AudioSource source1;
     public AudioSource source2;
-    public AudioClip slash;
-    public AudioClip damage;
+    public AudioClip theme;
 
     private void Awake()
     {
         instance = this;
     }
-
-    public void SwordSlash()
+    private void Start()
     {
-        Play(source1 ,slash);
+        Theme();
     }
-    public void Damage()
+
+    public void Theme()
     {
-        Play(source2 , damage);
+        Play(source1 ,theme);
     }
 
     private void Play(AudioSource p, AudioClip pos)
