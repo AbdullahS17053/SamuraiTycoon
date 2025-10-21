@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class TroopManager : MonoBehaviour
 {
+    public static TroopManager instance;    
+
     [Header("Troop Configuration")]
     public GameObject troopPrefab;
     public Transform troopContainer;
@@ -17,9 +19,14 @@ public class TroopManager : MonoBehaviour
     // OPTIMIZED: Object pooling
     private Queue<GameObject> troopPool = new Queue<GameObject>();
     private List<GameObject> activeTroops = new List<GameObject>();
-    private const int INITIAL_POOL_SIZE = 40;
+    private const int INITIAL_POOL_SIZE = 65;
 
     private Coroutine spawnCoroutine;
+
+    private void Awake()
+    {
+        instance = this;
+    }
 
     void Start()
     {
@@ -74,7 +81,10 @@ public class TroopManager : MonoBehaviour
         activeTroops.Add(troopObj);
 
         TroopUnit troop = troopObj.GetComponent<TroopUnit>();
+        troop.troopLevel = -1;
+        troop.currentPower = 10;
         troop.troopId = troopCount++;
+        troop.Reset();
     }
 
     // OPTIMIZED: Return troop to pool

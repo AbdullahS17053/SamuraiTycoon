@@ -18,19 +18,25 @@ public class CameraPan : MonoBehaviour
     public bool useMouseInput = true;
     public float mousePanThreshold = 0.1f; // Dead zone for mouse movement
 
+    [Header("Tap Settings")]
+    public float tapThresholdTime = 0.2f;     // Seconds
+    public float tapThresholdDistance = 10f;  // Pixels
+
     private Vector3 targetPosition;
     private Vector3 lastPanPosition;
-    private int panFingerId = -1; // Touch finger ID
+    private int panFingerId = -1;
     private bool isPanning = false;
+
+    private float touchStartTime;
+    private Vector2 touchStartPos;
+
     private Camera cam;
 
     void Awake()
     {
         cam = GetComponent<Camera>();
         if (cam == null)
-        {
             cam = Camera.main;
-        }
 
         targetPosition = transform.position;
     }
@@ -43,82 +49,112 @@ public class CameraPan : MonoBehaviour
 
     void HandleInput()
     {
-        // Touch input (mobile)
         if (useTouchInput && Input.touchCount > 0)
         {
             HandleTouchInput();
         }
-        // Mouse input (desktop)
         else if (useMouseInput)
         {
             HandleMouseInput();
         }
     }
 
+    // ------------------------
+    // TOUCH INPUT
+    // ------------------------
     void HandleTouchInput()
     {
-        Touch touch = Input.GetTouch(0);
-
-        switch (touch.phase)
+        foreach (Touch touch in Input.touches)
         {
-            case TouchPhase.Began:
-                if (panFingerId == -1)
-                {
-                    panFingerId = touch.fingerId;
-                    lastPanPosition = GetWorldPosition(touch.position);
-                    isPanning = true;
-                }
-                break;
+            switch (touch.phase)
+            {
+                case TouchPhase.Began:
+                    if (panFingerId == -1)
+                    {
+                        panFingerId = touch.fingerId;
+                        lastPanPosition = GetWorldPosition(touch.position);
+                        touchStartPos = touch.position;
+                        touchStartTime = Time.time;
+                        WarManager.instance.isPanning = false;
+                    }
+                    break;
 
-            case TouchPhase.Moved:
-                if (touch.fingerId == panFingerId)
-                {
-                    Vector3 currentPanPosition = GetWorldPosition(touch.position);
-                    Vector3 offset = lastPanPosition - currentPanPosition;
+                case TouchPhase.Moved:
+                    if (touch.fingerId == panFingerId)
+                    {
+                        float moveDistance = (touch.position - touchStartPos).magnitude;
+                        if (moveDistance > tapThresholdDistance)
+                        {
+                            WarManager.instance.isPanning = true; // Movement is large enough to count as a pan
+                            Vector3 currentPanPosition = GetWorldPosition(touch.position);
+                            Vector3 offset = lastPanPosition - currentPanPosition;
+                            PanCamera(offset);
+                            lastPanPosition = currentPanPosition;
+                        }
+                    }
+                    break;
 
-                    PanCamera(offset);
+                case TouchPhase.Ended:
+                case TouchPhase.Canceled:
+                    if (touch.fingerId == panFingerId)
+                    {
+                        float touchDuration = Time.time - touchStartTime;
+                        float totalDistance = (touch.position - touchStartPos).magnitude;
 
-                    lastPanPosition = currentPanPosition;
-                }
-                break;
+                        // If it's not a pan and quick enough, treat it as a tap
+                        if (!isPanning && touchDuration <= tapThresholdTime && totalDistance < tapThresholdDistance)
+                        {
+                            OnTap(touch.position);
+                        }
 
-            case TouchPhase.Ended:
-            case TouchPhase.Canceled:
-                if (touch.fingerId == panFingerId)
-                {
-                    panFingerId = -1;
-                    isPanning = false;
-                }
-                break;
+                        panFingerId = -1;
+                        WarManager.instance.isPanning = false;
+                    }
+                    break;
+            }
         }
     }
 
+    // ------------------------
+    // MOUSE INPUT
+    // ------------------------
     void HandleMouseInput()
     {
         if (Input.GetMouseButtonDown(0))
         {
             lastPanPosition = GetWorldPosition(Input.mousePosition);
-            isPanning = true;
+            touchStartPos = Input.mousePosition;
+            touchStartTime = Time.time;
+            WarManager.instance.isPanning = false;
         }
-        else if (Input.GetMouseButton(0) && isPanning)
+        else if (Input.GetMouseButton(0))
         {
             Vector3 currentPanPosition = GetWorldPosition(Input.mousePosition);
             Vector3 offset = lastPanPosition - currentPanPosition;
 
-            // Apply threshold to prevent jittery movement
             if (offset.magnitude > mousePanThreshold)
             {
+                WarManager.instance.isPanning = true;
                 PanCamera(offset);
                 lastPanPosition = currentPanPosition;
             }
         }
         else if (Input.GetMouseButtonUp(0))
         {
-            isPanning = false;
+            float duration = Time.time - touchStartTime;
+            Vector2 distance = (Vector2)Input.mousePosition - touchStartPos;
+
+            if (!isPanning && duration <= tapThresholdTime && distance.magnitude < tapThresholdDistance)
+            {
+                OnTap(Input.mousePosition);
+            }
+
+            WarManager.instance.isPanning = false;
         }
 
-        // Mouse wheel pan (alternative method)
-        if (Input.GetMouseButton(2)) // Middle mouse button
+
+        // Optional middle mouse pan
+        if (Input.GetMouseButton(2))
         {
             float mouseX = Input.GetAxis("Mouse X");
             float mouseY = Input.GetAxis("Mouse Y");
@@ -128,20 +164,20 @@ public class CameraPan : MonoBehaviour
         }
     }
 
+    // ------------------------
+    // CAMERA MOVEMENT
+    // ------------------------
     void PanCamera(Vector3 offset)
     {
-        // Apply inversion settings
         float xMultiplier = invertX ? -1f : 1f;
         float yMultiplier = invertY ? -1f : 1f;
 
-        // Calculate new position
         Vector3 newPosition = targetPosition + new Vector3(
             offset.x * panSpeed * xMultiplier,
             0,
             offset.z * panSpeed * yMultiplier
         );
 
-        // Apply bounds
         if (useBounds)
         {
             newPosition.x = Mathf.Clamp(newPosition.x, xBounds.x, xBounds.y);
@@ -165,9 +201,7 @@ public class CameraPan : MonoBehaviour
 
     Vector3 GetWorldPosition(Vector3 screenPosition)
     {
-        // Create a plane at y=0 (or whatever your ground level is)
         Plane plane = new Plane(Vector3.up, Vector3.zero);
-
         Ray ray = cam.ScreenPointToRay(screenPosition);
 
         if (plane.Raycast(ray, out float distance))
@@ -175,11 +209,26 @@ public class CameraPan : MonoBehaviour
             return ray.GetPoint(distance);
         }
 
-        // Fallback: return current world position if raycast fails
         return transform.position;
     }
 
-    // Public methods to control camera programmatically
+    // ------------------------
+    // TAP HANDLER
+    // ------------------------
+    protected virtual void OnTap(Vector3 screenPosition)
+    {
+        Debug.Log($"Tap detected at screen position: {screenPosition}");
+        // Example:
+        // Ray ray = cam.ScreenPointToRay(screenPosition);
+        // if (Physics.Raycast(ray, out RaycastHit hit))
+        // {
+        //     Debug.Log($"Tapped object: {hit.collider.name}");
+        // }
+    }
+
+    // ------------------------
+    // PUBLIC UTILITY METHODS
+    // ------------------------
     public void SetTargetPosition(Vector3 newPosition)
     {
         if (useBounds)
@@ -193,7 +242,7 @@ public class CameraPan : MonoBehaviour
     public void MoveToPosition(Vector3 newPosition)
     {
         SetTargetPosition(newPosition);
-        transform.position = newPosition; // Instant move
+        transform.position = newPosition;
     }
 
     public void SetBounds(Vector2 newXBounds, Vector2 newZBounds)
@@ -201,14 +250,12 @@ public class CameraPan : MonoBehaviour
         xBounds = newXBounds;
         zBounds = newZBounds;
 
-        // Clamp current position to new bounds
         Vector3 clampedPosition = transform.position;
         clampedPosition.x = Mathf.Clamp(clampedPosition.x, xBounds.x, xBounds.y);
         clampedPosition.z = Mathf.Clamp(clampedPosition.z, zBounds.x, zBounds.y);
         SetTargetPosition(clampedPosition);
     }
 
-    // Debug visualization for bounds
     void OnDrawGizmosSelected()
     {
         if (useBounds)
@@ -220,11 +267,9 @@ public class CameraPan : MonoBehaviour
         }
     }
 
-    // Context menu methods for easy setup
     [ContextMenu("Set Bounds From Current Scene")]
     void SetBoundsFromScene()
     {
-        // This is a helper method - you might want to customize this based on your scene
         xBounds = new Vector2(-50f, 50f);
         zBounds = new Vector2(-50f, 50f);
         Debug.Log($"Camera bounds set to: X({xBounds.x}, {xBounds.y}), Z({zBounds.x}, {zBounds.y})");

@@ -8,6 +8,7 @@ public class WarManager : MonoBehaviour
 {
     public static WarManager instance;
 
+    public bool isPanning = false;
     public GameObject cam1;
     public GameObject cam2;
     public GameObject WarPanel;

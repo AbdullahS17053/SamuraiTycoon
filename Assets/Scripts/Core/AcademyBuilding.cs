@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Net.Sockets;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using static AcademyBuilding;
 
-public class AcademyBuilding : MonoBehaviour
+public class AcademyBuilding : MonoBehaviour, IPointerClickHandler
 {
     [Header("Academy Configuration")]
     public string academyName = "Military Academy";
@@ -40,9 +41,11 @@ public class AcademyBuilding : MonoBehaviour
             }
         }
     }
-
-    void OnMouseDown()
+    public void OnPointerClick(PointerEventData eventData)
     {
+        if (WarManager.instance.isPanning)
+            return;
+
         ToggleAcademyPanel();
     }
 
