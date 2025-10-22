@@ -12,6 +12,9 @@ public class BuildingObject3D : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (WarManager.instance.isPanning)
+            return;
+
         if (trainingBuilding.locked)
         {
             Debug.Log("Building is locked");

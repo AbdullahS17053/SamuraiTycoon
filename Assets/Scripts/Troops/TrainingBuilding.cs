@@ -119,9 +119,9 @@ public class TrainingBuilding : MonoBehaviour
 
     public void ReturnTroopToPool(TroopUnit troop)
     {
-        troop.gameObject.SetActive(false);
         troopPool.Enqueue(troop);
         activeTroops.Remove(troop);
+        TroopManager.instance.ReturnTroopToPool(troop.gameObject);
     }
 
     void StartTraining(TroopUnit troop)

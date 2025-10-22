@@ -9,6 +9,8 @@ public class TroopUnit : MonoBehaviour
     [Header("Troop Identification")]
     public int troopId;
 
+    public GameObject[] skins;
+
     [Header("Troop Stats")]
     public int currentPower = 10;
     public Slider slider;
@@ -33,11 +35,6 @@ public class TroopUnit : MonoBehaviour
         }
     }
 
-    void Start()
-    {
-        MoveToBuilding();
-    }
-
     void MoveToBuilding()
     {
         if (currentTrainingBuilding != null)
@@ -59,6 +56,8 @@ public class TroopUnit : MonoBehaviour
         if (movementCoroutine != null)
             StopCoroutine(movementCoroutine);
 
+        if (!gameObject.activeSelf) return;
+
         movementCoroutine = StartCoroutine(MoveToPosition(position));
     }
 
@@ -68,7 +67,7 @@ public class TroopUnit : MonoBehaviour
         Walk();
 
         // OPTIMIZED: More efficient arrival checking
-        float timeout = 10f;
+        float timeout = 50f;
         float startTime = Time.time;
 
         while (navAgent.pathPending ||
@@ -89,6 +88,16 @@ public class TroopUnit : MonoBehaviour
     public void SkipTraining()
     {
         MoveToBuilding();
+    }
+    public void Reset()
+    {
+        MoveToBuilding();
+
+        foreach (GameObject g in skins)
+        {
+            g.SetActive(false);
+        }
+        skins[0].SetActive(true);
     }
 
     public IEnumerator StartTraining(float time, int power)
@@ -123,7 +132,19 @@ public class TroopUnit : MonoBehaviour
             currentTrainingBuilding.CompleteCurrentTraining(this);
         }
 
-        currentPower += power;
+        foreach(GameObject g in skins)
+        {
+            g.SetActive(false);
+        }
+        if(troopLevel < skins.Length)
+        {
+            skins[troopLevel].SetActive(true);
+        }
+        else
+        {
+            troopLevel = skins.Length - 1;
+        }
+            currentPower += power;
         MoveToBuilding();
     }
 
@@ -171,7 +192,7 @@ public class TroopUnit : MonoBehaviour
     {
         animator.SetBool("Walking", false);
         animator.SetTrigger("Train");
-        if (navAgent != null)
+        if (navAgent != null && gameObject.activeSelf)
         {
             navAgent.isStopped = true;
         }
@@ -188,5 +209,6 @@ public class TroopUnit : MonoBehaviour
 
         if (slider != null)
             slider.gameObject.SetActive(false);
+
     }
 }
