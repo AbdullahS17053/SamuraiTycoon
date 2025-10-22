@@ -228,12 +228,14 @@ public class TrainingBuilding : MonoBehaviour
 
     public void UpgradeIncome()
     {
+        level++;
         BaseIncomePerTrained = Mathf.RoundToInt(BaseIncomePerTrained * IncomeMultiplier);
         VFXManager.instance.Income();
     }
 
     public void UpgradeEfficiency()
     {
+        level++;
         baseTrainingTime /= trainingTimerReducer;
         VFXManager.instance.Speed();
     }
@@ -242,6 +244,7 @@ public class TrainingBuilding : MonoBehaviour
     {
         if (currentWorkers < maxWorkers)
         {
+            level++;
             currentWorkers++;
             VFXManager.instance.Capacity();
 
